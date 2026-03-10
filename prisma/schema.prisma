@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 사용자 테이블
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String 
+  alias     String?
+  lessons   Lesson[] 
+  createdAt DateTime @default(now())
+}
+
+// 시간표 수업 테이블 (실제 시간이 아닌 '교시' 기준)
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  
+  subjectName String   // 과목명 (예: "컴퓨터프로그래밍기초")
+  roomName    String   // 강의실 (예: "8105")
+  dayOfWeek   Int      // 요일 (0:월, 1:화, 2:수, 3:목, 4:금)
+  
+  // 변경된 핵심 부분: 1~4교시, 6~9교시 체계를 반영
+  startPeriod Int      // 시작 교시 (예: 1)
+  endPeriod   Int      // 종료 교시 (예: 4)
+  
+  colorCode   String   // UI 표시용 색상 (예: "bg-red-300" 또는 "#FCA5A5")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
