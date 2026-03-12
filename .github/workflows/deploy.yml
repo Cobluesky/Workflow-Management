@@ -1,0 +1,51 @@
+name: CI/CD Pipeline (Docker)
+
+on:
+  push:
+    branches: [ "dev", "main" ] # dev나 main 브랜치에 코드가 올라오면 실행
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. GitHub 서버에 내 코드 내려받기
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Docker Hub(창고) 로그인
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # 3. 도커 이미지 굽고 Docker Hub에 업로드
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+
+    # 4. 오라클 서버(Rocky Linux)에 원격 접속해서 새 버전 실행하기
+    - name: Deploy to Oracle Server via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          # 최신 이미지 다운로드
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+          
+          # 기존에 돌고 있던 컨테이너 멈추고 삭제 (에러 무시)
+          sudo docker stop timetable-web || true
+          sudo docker rm timetable-web || true
+          
+          # 새 컨테이너 실행 (환경변수 주입)
+          sudo docker run -d -p 3000:3000 --name timetable-web \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
