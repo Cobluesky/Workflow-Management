@@ -10,17 +10,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG DATABASE_URL
-ARG NEXTAUTH_SECRET
-ARG NEXTAUTH_URL
-
-ENV DATABASE_URL=$DATABASE_URL
-ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-ENV NEXTAUTH_URL=$NEXTAUTH_URL
-
 # Prisma Client 생성 후 Next.js 빌드 진행
 RUN npx prisma generate
-RUN npm run build
+    
+RUN --mount=type=secret,id=DATABASE_URL \
+    --mount=type=secret,id=NEXTAUTH_SECRET \
+    --mount=type=secret,id=NEXTAUTH_URL \
+    DATABASE_URL="$(cat /run/secrets/DATABASE_URL)" \
+    NEXTAUTH_SECRET="$(cat /run/secrets/NEXTAUTH_SECRET)" \
+    NEXTAUTH_URL="$(cat /run/secrets/NEXTAUTH_URL)" \
+    npm run build
 
 # 3단계: 실행 (runner)
 FROM node:20-alpine AS runner
