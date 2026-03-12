@@ -27,7 +27,10 @@ jobs:
         context: .
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
-
+        build-args: |
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
     # 4. 오라클 서버(Rocky Linux)에 원격 접속해서 새 버전 실행하기
     - name: Deploy to Oracle Server via SSH
       uses: appleboy/ssh-action@v1.0.0
