@@ -1,65 +1,46 @@
-name: CI/CD Pipeline (Docker)
+# 1. Base 이미지 교체 (alpine -> bookworm-slim)
+# QEMU ARM 번역기 환경에서 npm ci가 뻗는 문제를 해결합니다.
+FROM node:20-bookworm-slim AS base
+# Debian 환경에서 Prisma가 DB와 통신하기 위해 필요한 openssl 패키지를 미리 설치합니다.
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-on:
-  push:
-    branches: [ "dev", "main" ] # dev나 main 브랜치에 코드가 올라오면 실행
+# 2. 패키지 설치 단계
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+# 3. 빌드 단계
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-    steps:
-    # 1. GitHub 서버에 내 코드 내려받기
-    - name: Checkout Code
-      uses: actions/checkout@v3
+# Prisma Client 생성
+RUN npx prisma generate
 
-    # 👇 [추가 1] 다른 CPU 아키텍처(ARM)를 에뮬레이션하기 위한 도구 설치
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+# 이전에 설정한 BuildKit Secret 마운트를 사용하여 안전하게 환경변수 주입 후 빌드
+RUN --mount=type=secret,id=DATABASE_URL \
+    --mount=type=secret,id=NEXTAUTH_SECRET \
+    --mount=type=secret,id=NEXTAUTH_URL \
+    DATABASE_URL="$(cat /run/secrets/DATABASE_URL)" \
+    NEXTAUTH_SECRET="$(cat /run/secrets/NEXTAUTH_SECRET)" \
+    NEXTAUTH_URL="$(cat /run/secrets/NEXTAUTH_URL)" \
+    npm run build
 
-    # 👇 [추가 2] 다중 아키텍처 빌드를 지원하는 고급 도커 빌더(Buildx) 세팅
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+# 4. 프로덕션 실행 단계
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV production
 
-    # 2. Docker Hub(창고) 로그인
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+# 빌드된 결과물과 실행에 필요한 파일들만 복사
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-    # 3. 도커 이미지 굽고 Docker Hub에 업로드
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        # 👇 [추가 3] 오라클 ARM64 서버에 맞게 이미지 포맷 강제 지정
-        platforms: linux/arm64
-        tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
-        secrets: |
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
-          
-    # 4. 오라클 서버(Rocky Linux)에 원격 접속해서 새 버전 실행하기
-    - name: Deploy to Oracle Server via SSH
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        script: |
-          # 최신 이미지 다운로드
-          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+EXPOSE 3000
+ENV PORT 3000
 
-          # 기존에 돌고 있던 컨테이너 멈추고 삭제 (에러 무시)
-          sudo docker stop timetable-web || true
-          sudo docker rm timetable-web || true
-
-          # 새 컨테이너 실행 (환경변수 주입)
-          sudo docker run -d -p 3000:3000 --name timetable-web \
-            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-            -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
-            -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
-            ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+# 서버 실행
+CMD ["npm", "start"]
