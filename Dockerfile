@@ -1,18 +1,19 @@
-# 1단계: 의존성 설치 (deps)
-FROM node:20-alpine AS deps
+# 1. Base 이미지 교체 
+FROM node:20-bookworm-slim AS base
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/
+
+# 2. 패키지 설치 단계
+FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# 2단계: 빌드 (builder)
-FROM node:20-alpine AS builder
+# 3. 빌드 단계
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Prisma Client 생성 후 Next.js 빌드 진행
 RUN npx prisma generate
-    
 RUN --mount=type=secret,id=DATABASE_URL \
     --mount=type=secret,id=NEXTAUTH_SECRET \
     --mount=type=secret,id=NEXTAUTH_URL \
@@ -21,20 +22,14 @@ RUN --mount=type=secret,id=DATABASE_URL \
     NEXTAUTH_URL="$(cat /run/secrets/NEXTAUTH_URL)" \
     npm run build
 
-# 3단계: 실행 (runner)
-FROM node:20-alpine AS runner
+# 4. 프로덕션 실행 단계
+FROM base AS runner
 WORKDIR /app
-
-ENV NODE_ENV=production
-
-# 빌드된 결과물 중 실행에 꼭 필요한 파일 가져오기
+ENV NODE_ENV production
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# 서버 실행 명령어
-CMD ["node", "server.js"]
+ENV PORT 3000
+CMD ["npm", "start"]

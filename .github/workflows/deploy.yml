@@ -1,46 +1,53 @@
-# 1. Base 이미지 교체 (alpine -> bookworm-slim)
-# QEMU ARM 번역기 환경에서 npm ci가 뻗는 문제를 해결합니다.
-FROM node:20-bookworm-slim AS base
-# Debian 환경에서 Prisma가 DB와 통신하기 위해 필요한 openssl 패키지를 미리 설치합니다.
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+name: CI/CD Pipeline Docker
 
-# 2. 패키지 설치 단계
-FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+on:
+  push:
+    branches: [ "dev", "main" ]
 
-# 3. 빌드 단계
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-# Prisma Client 생성
-RUN npx prisma generate
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-# 이전에 설정한 BuildKit Secret 마운트를 사용하여 안전하게 환경변수 주입 후 빌드
-RUN --mount=type=secret,id=DATABASE_URL \
-    --mount=type=secret,id=NEXTAUTH_SECRET \
-    --mount=type=secret,id=NEXTAUTH_URL \
-    DATABASE_URL="$(cat /run/secrets/DATABASE_URL)" \
-    NEXTAUTH_SECRET="$(cat /run/secrets/NEXTAUTH_SECRET)" \
-    NEXTAUTH_URL="$(cat /run/secrets/NEXTAUTH_URL)" \
-    npm run build
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
 
-# 4. 프로덕션 실행 단계
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV production
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-# 빌드된 결과물과 실행에 필요한 파일들만 복사
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-EXPOSE 3000
-ENV PORT 3000
-
-# 서버 실행
-CMD ["npm", "start"]
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        platforms: linux/arm64
+        tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+        secrets: |
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+          
+    - name: Deploy to Oracle Server via SSH
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+          sudo docker stop timetable-web || true
+          sudo docker rm timetable-web || true
+          sudo docker run -d -p 3000:3000 --name timetable-web \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
