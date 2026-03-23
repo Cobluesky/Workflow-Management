@@ -1,0 +1,42 @@
+name: Auth Server Check
+
+on:
+  push:
+    paths:
+      - "auth-server/**"
+      - ".github/workflows/auth-server-check.yml"
+  pull_request:
+    paths:
+      - "auth-server/**"
+      - ".github/workflows/auth-server-check.yml"
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: auth-server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: mysql://test:test@localhost:3306/workspace_auth_test
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build project
+        run: npm run build

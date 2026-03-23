@@ -1,21 +1,77 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAppUser } from "@/lib/server-auth";
+
+export async function GET(req: Request) {
+  try {
+    const appUser = await requireAppUser(req);
+
+    if (appUser instanceof NextResponse) {
+      return appUser;
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          alias: appUser.localUser.alias,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: "INTERNAL_SERVER_ERROR", message: "Failed to load user profile." },
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(req: Request) {
   try {
-    const { userId, newAlias } = await req.json();
+    const appUser = await requireAppUser(req);
 
-    if (!userId || !newAlias) {
-      return NextResponse.json({ message: "필수 정보 누락" }, { status: 400 });
+    if (appUser instanceof NextResponse) {
+      return appUser;
     }
 
-    await prisma.user.update({
-      where: { id: Number(userId) },
+    const { newAlias } = await req.json();
+
+    if (!newAlias || typeof newAlias !== "string") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: "INVALID_ALIAS", message: "Alias is required." },
+        },
+        { status: 400 }
+      );
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: appUser.localUser.id },
       data: { alias: newAlias },
+      select: { alias: true },
     });
 
-    return NextResponse.json({ message: "닉네임 변경 성공" }, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          alias: updatedUser.alias,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    return NextResponse.json({ message: "서버 오류" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: "INTERNAL_SERVER_ERROR", message: "Failed to update alias." },
+      },
+      { status: 500 }
+    );
   }
 }

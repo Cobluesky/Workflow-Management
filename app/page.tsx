@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from "@/app/Providers";
 
 type Lesson = {
   id: number;
@@ -34,7 +34,8 @@ const COLORS = [
 ];
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { user, accessToken, isLoading } = useAuth();
+  const session = isLoading ? undefined : user ? { user } : null;
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<Set<string>>(new Set());
@@ -63,8 +64,11 @@ export default function Home() {
     // 로그인 된 상태라면 DB에서 데이터를 불러오기
     const fetchTimetable = async () => {
       try {
-        const userId = (session.user as any).id;
-        const res = await fetch(`/api/timetable?userId=${userId}`);
+        const res = await fetch('/api/timetable', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
         
         if (res.ok) {
           const data = await res.json();
@@ -92,7 +96,6 @@ export default function Home() {
 
     // 백엔드 전송 데이터
     const payload = {
-      userId: Number((session.user as any).id),
       lessons: lessons,
       blockedSlots: Array.from(blockedSlots),
     };
@@ -101,7 +104,10 @@ export default function Home() {
       // 백엔드로 시간표 데이터 전송, 저장.
       const res = await fetch('/api/timetable', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(payload)
       });
 

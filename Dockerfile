@@ -1,6 +1,6 @@
-# 1. Base 이미지 교체 
+﻿# 1. Base 이미지
 FROM node:20-bookworm-slim AS base
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # 2. 패키지 설치 단계
 FROM base AS deps
@@ -15,11 +15,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 RUN --mount=type=secret,id=DATABASE_URL \
-    --mount=type=secret,id=NEXTAUTH_SECRET \
-    --mount=type=secret,id=NEXTAUTH_URL \
+    --mount=type=secret,id=AUTH_SERVER_URL \
     DATABASE_URL="$(cat /run/secrets/DATABASE_URL)" \
-    NEXTAUTH_SECRET="$(cat /run/secrets/NEXTAUTH_SECRET)" \
-    NEXTAUTH_URL="$(cat /run/secrets/NEXTAUTH_URL)" \
+    AUTH_SERVER_URL="$(cat /run/secrets/AUTH_SERVER_URL)" \
+    NEXT_PUBLIC_AUTH_SERVER_URL="$(cat /run/secrets/AUTH_SERVER_URL)" \
     npm run build
 
 # 4. 프로덕션 실행 단계

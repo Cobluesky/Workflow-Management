@@ -1,0 +1,12 @@
+process.env.PORT = "4001";
+process.env.NODE_ENV = "test";
+process.env.DATABASE_URL = "mysql://test:test@localhost:3306/workspace_auth_test";
+process.env.JWT_ACCESS_SECRET = "test-access-secret";
+process.env.JWT_REFRESH_SECRET = "test-refresh-secret";
+process.env.JWT_ISSUER = "https://auth.workspace.p-e.kr";
+process.env.JWT_AUDIENCE = "workspace-clients";
+process.env.ACCESS_TOKEN_TTL_MINUTES = "15";
+process.env.REFRESH_TOKEN_TTL_DAYS = "30";
+process.env.COOKIE_DOMAIN = ".workspace.p-e.kr";
+process.env.COOKIE_SECURE = "false";
+process.env.CLIENT_ORIGINS = "https://app.workspace.p-e.kr,https://project1.workspace.p-e.kr";

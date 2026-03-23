@@ -1,18 +1,21 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/Providers";
 
 export default function MyPage() {
-  const { data: session, update } = useSession(); 
+  const { user, accessToken, isLoading: authLoading, updateAlias } = useAuth();
   const router = useRouter();
-  
-  const [alias, setAlias] = useState((session?.user as any)?.alias || "");
+  const [alias, setAlias] = useState(user?.alias || "");
   const [isLoading, setIsLoading] = useState(false);
 
-  if (session === null) {
-    router.push("/api/auth/signin");
+  useEffect(() => {
+    setAlias(user?.alias || "");
+  }, [user?.alias]);
+
+  if (!authLoading && !user) {
+    router.push("/login");
     return null;
   }
 
@@ -23,19 +26,21 @@ export default function MyPage() {
     try {
       const res = await fetch("/api/user", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: (session?.user as any).id, newAlias: alias }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ newAlias: alias }),
       });
 
       if (res.ok) {
-        alert("닉네임이 성공적으로 변경되었습니다!");
-        await update({ alias }); // 세션 즉시 새로고침
+        updateAlias(alias);
         router.push("/");
       } else {
-        alert("변경 실패");
+        alert("별명 변경에 실패했습니다.");
       }
     } catch (error) {
-      alert("오류 발생");
+      alert("요청 처리 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -47,15 +52,31 @@ export default function MyPage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">마이페이지</h1>
         <form onSubmit={handleUpdate} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">계정 이메일 (변경 불가)</label>
-            <input type="text" disabled className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed" value={session?.user?.email || ""} />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
+            <input
+              type="text"
+              disabled
+              className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+              value={user?.email || ""}
+            />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">닉네임 (Alias)</label>
-            <input type="text" required className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="멋진 닉네임을 지어주세요" value={alias} onChange={(e) => setAlias(e.target.value)} />
+            <label className="block text-sm font-semibold text-gray-700 mb-2">별명</label>
+            <input
+              type="text"
+              required
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="사용할 별명을 입력하세요"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+            />
           </div>
-          <button type="submit" disabled={isLoading} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors">
-            {isLoading ? "저장 중..." : "정보 수정하기"}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors"
+          >
+            {isLoading ? "저장 중..." : "정보 수정"}
           </button>
         </form>
       </div>
