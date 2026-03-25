@@ -15,12 +15,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
-RUN --mount=type=secret,id=DATABASE_URL \
-    --mount=type=secret,id=AUTH_SERVER_URL \
-    DATABASE_URL="$(cat /run/secrets/DATABASE_URL)" \
-    AUTH_SERVER_URL="$(cat /run/secrets/AUTH_SERVER_URL)" \
-    NEXT_PUBLIC_AUTH_SERVER_URL="$(cat /run/secrets/AUTH_SERVER_URL)" \
-    npm run build
+RUN --mount=type=secret,id=APP_ENV_FILE \
+    sh -ac 'set -a && . /run/secrets/APP_ENV_FILE && set +a && npm run build'
 
 # 4. 프로덕션 실행 단계
 FROM base AS runner

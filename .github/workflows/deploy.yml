@@ -40,31 +40,15 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            sudo mkdir -p /opt/workspace/env
+            cat <<'EOF' | sudo tee /opt/workspace/env/workspace-auth-server.env > /dev/null
+            ${{ secrets.AUTH_ENV_FILE }}
+            EOF
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest
             sudo docker stop workspace-auth-server || true
             sudo docker rm workspace-auth-server || true
             sudo docker run -d --restart unless-stopped -p 127.0.0.1:4000:4000 --name workspace-auth-server \
-              -e PORT="4000" \
-              -e NODE_ENV="production" \
-              -e DATABASE_URL="${{ secrets.AUTH_DATABASE_URL }}" \
-              -e JWT_ACCESS_SECRET="${{ secrets.JWT_ACCESS_SECRET }}" \
-              -e JWT_REFRESH_SECRET="${{ secrets.JWT_REFRESH_SECRET }}" \
-              -e JWT_ISSUER="${{ secrets.JWT_ISSUER }}" \
-              -e JWT_AUDIENCE="${{ secrets.JWT_AUDIENCE }}" \
-              -e ACCESS_TOKEN_TTL_MINUTES="${{ secrets.ACCESS_TOKEN_TTL_MINUTES }}" \
-              -e REFRESH_TOKEN_TTL_DAYS="${{ secrets.REFRESH_TOKEN_TTL_DAYS }}" \
-              -e COOKIE_DOMAIN="${{ secrets.COOKIE_DOMAIN }}" \
-              -e COOKIE_SECURE="true" \
-              -e CLIENT_ORIGINS="${{ secrets.CLIENT_ORIGINS }}" \
-              -e GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
-              -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-              -e GOOGLE_CALLBACK_URL="${{ secrets.GOOGLE_CALLBACK_URL }}" \
-              -e KAKAO_CLIENT_ID="${{ secrets.KAKAO_CLIENT_ID }}" \
-              -e KAKAO_CLIENT_SECRET="${{ secrets.KAKAO_CLIENT_SECRET }}" \
-              -e KAKAO_CALLBACK_URL="${{ secrets.KAKAO_CALLBACK_URL }}" \
-              -e GITHUB_CLIENT_ID="${{ secrets.GITHUB_CLIENT_ID }}" \
-              -e GITHUB_CLIENT_SECRET="${{ secrets.GITHUB_CLIENT_SECRET }}" \
-              -e GITHUB_CALLBACK_URL="${{ secrets.GITHUB_CALLBACK_URL }}" \
+              --env-file /opt/workspace/env/workspace-auth-server.env \
               ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest
             sudo docker image prune -f || true
 
@@ -97,8 +81,7 @@ jobs:
           platforms: linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
           secrets: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            AUTH_SERVER_URL=${{ secrets.AUTH_SERVER_URL }}
+            APP_ENV_FILE=${{ secrets.APP_ENV_FILE }}
 
       - name: Deploy App Server via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -107,11 +90,14 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            sudo mkdir -p /opt/workspace/env
+            cat <<'EOF' | sudo tee /opt/workspace/env/timetable-web.env > /dev/null
+            ${{ secrets.APP_ENV_FILE }}
+            EOF
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
             sudo docker stop timetable-web || true
             sudo docker rm timetable-web || true
             sudo docker run -d --restart unless-stopped -p 127.0.0.1:3000:3000 --name timetable-web \
-              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              -e AUTH_SERVER_URL="${{ secrets.AUTH_SERVER_URL }}" \
+              --env-file /opt/workspace/env/timetable-web.env \
               ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
             sudo docker image prune -f || true
