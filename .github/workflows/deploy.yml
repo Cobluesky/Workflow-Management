@@ -114,6 +114,13 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Write App Env File
+        shell: bash
+        run: |
+          cat <<'EOF' > /tmp/timetable-web.env
+          ${{ secrets.APP_ENV_FILE }}
+          EOF
+
       - name: Build and Push App Image
         uses: docker/build-push-action@v4
         with:
@@ -122,8 +129,8 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
-          secrets: |
-            APP_ENV_FILE=${{ secrets.APP_ENV_FILE }}
+          secret-files: |
+            APP_ENV_FILE=/tmp/timetable-web.env
           cache-from: type=gha,scope=timetable-web
           cache-to: type=gha,mode=max,scope=timetable-web
 

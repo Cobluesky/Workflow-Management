@@ -35,7 +35,20 @@ function parseEnvFile(contents) {
   return env;
 }
 
-const envFile = readFileSync(secretPath, "utf8");
+let envFile;
+
+try {
+  envFile = readFileSync(secretPath, "utf8");
+} catch (error) {
+  if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+    console.error(
+      "Missing BuildKit secret file /run/secrets/APP_ENV_FILE. Check deploy.yml and the APP_ENV_FILE GitHub secret."
+    );
+    process.exit(1);
+  }
+
+  throw error;
+}
 const parsedEnv = parseEnvFile(envFile);
 
 if (!parsedEnv.AUTH_SERVER_URL && parsedEnv.NEXT_PUBLIC_AUTH_SERVER_URL) {
