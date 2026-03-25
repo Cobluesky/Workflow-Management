@@ -16,7 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 RUN --mount=type=secret,id=APP_ENV_FILE \
-    sh -ac "tr -d '\r' < /run/secrets/APP_ENV_FILE > /tmp/app.env && set -a && . /tmp/app.env && set +a && npm run build"
+    node scripts/run-build-with-env-file.mjs
 
 # 4. 프로덕션 실행 단계
 FROM base AS runner
