@@ -4,13 +4,52 @@ on:
   push:
     branches: [ "dev", "main" ]
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-deploy-auth:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.filter.outputs.auth }}
+      app: ${{ steps.filter.outputs.app }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Detect Changed Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            auth:
+              - "auth-server/**"
+              - ".github/workflows/deploy.yml"
+            app:
+              - "app/**"
+              - "lib/**"
+              - "prisma/**"
+              - "public/**"
+              - "package.json"
+              - "package-lock.json"
+              - "tsconfig.json"
+              - "next.config.ts"
+              - "postcss.config.mjs"
+              - "prisma.config.ts"
+              - "Dockerfile"
+              - ".dockerignore"
+              - ".github/workflows/deploy.yml"
+
+  build-and-deploy-auth:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.auth == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -32,6 +71,8 @@ jobs:
           push: true
           platforms: linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest
+          cache-from: type=gha,scope=workspace-auth-server
+          cache-to: type=gha,mode=max,scope=workspace-auth-server
 
       - name: Deploy Auth Server via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -54,11 +95,12 @@ jobs:
 
   build-and-deploy-app:
     runs-on: ubuntu-latest
-    needs: build-and-deploy-auth
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -82,6 +124,8 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
           secrets: |
             APP_ENV_FILE=${{ secrets.APP_ENV_FILE }}
+          cache-from: type=gha,scope=timetable-web
+          cache-to: type=gha,mode=max,scope=timetable-web
 
       - name: Deploy App Server via SSH
         uses: appleboy/ssh-action@v1.0.0
