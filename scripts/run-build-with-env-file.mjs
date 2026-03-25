@@ -61,6 +61,11 @@ if (!parsedEnv.NEXT_PUBLIC_AUTH_SERVER_URL && parsedEnv.AUTH_SERVER_URL) {
 
 const requiredKeys = ["DATABASE_URL", "AUTH_SERVER_URL", "NEXT_PUBLIC_AUTH_SERVER_URL"];
 const missingKeys = requiredKeys.filter((key) => !parsedEnv[key]);
+const parsedKeys = Object.keys(parsedEnv);
+
+console.error(
+  `APP_ENV_FILE diagnostics: bytes=${Buffer.byteLength(envFile, "utf8")}, lines=${envFile.replace(/\r/g, "").split("\n").length}, parsedKeys=${parsedKeys.length ? parsedKeys.join(", ") : "(none)"}`
+);
 
 if (missingKeys.length > 0) {
   console.error(`Missing build env keys: ${missingKeys.join(", ")}`);

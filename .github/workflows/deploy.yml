@@ -121,6 +121,26 @@ jobs:
           ${{ secrets.APP_ENV_FILE }}
           EOF
 
+      - name: Inspect App Env File
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("/tmp/timetable-web.env")
+          text = path.read_text(encoding="utf-8")
+          lines = text.replace("\r", "").split("\n")
+          keys = []
+
+          for raw in lines:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+              continue
+            keys.append(line.split("=", 1)[0].strip())
+
+          print(f"APP_ENV_FILE diagnostics: bytes={len(text.encode('utf-8'))}, lines={len(lines)}, parsedKeys={', '.join(keys) if keys else '(none)'}")
+          PY
+
       - name: Build and Push App Image
         uses: docker/build-push-action@v4
         with:
