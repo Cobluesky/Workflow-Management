@@ -1,5 +1,5 @@
 ﻿import { AuthProvider } from "@prisma/client";
-import { env } from "../config/env.js";
+import { env, normalizeOrigin } from "../config/env.js";
 import { getOAuthProviderConfig, type SupportedOAuthProvider } from "../config/oauth.js";
 import { AppError } from "../lib/app-error.js";
 import { signOAuthState, verifyOAuthState } from "../lib/oauth-state.js";
@@ -28,7 +28,7 @@ function resolveRedirectUri(redirectUri?: string) {
     throw new AppError(400, "INVALID_REDIRECT_URI", "유효하지 않은 redirectUri 입니다.");
   }
 
-  if (!env.clientOrigins.includes(parsed.origin)) {
+  if (!env.clientOrigins.includes(normalizeOrigin(parsed.origin))) {
     throw new AppError(400, "INVALID_REDIRECT_URI", "허용되지 않은 redirectUri 입니다.");
   }
 

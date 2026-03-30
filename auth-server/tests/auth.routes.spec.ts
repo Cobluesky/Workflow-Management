@@ -118,6 +118,17 @@ describe("auth routes", () => {
     expect(response.headers["set-cookie"]?.[0]).toContain("refreshToken=new-refresh-token");
   });
 
+  it("OPTIONS /api/v1/auth/refresh returns CORS headers for an allowed origin", async () => {
+    const response = await request(app)
+      .options("/api/v1/auth/refresh")
+      .set("Origin", "https://app.workspace.p-e.kr")
+      .set("Access-Control-Request-Method", "POST");
+
+    expect(response.status).toBe(204);
+    expect(response.headers["access-control-allow-origin"]).toBe("https://app.workspace.p-e.kr");
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
+  });
+
   it("GET /api/v1/auth/verify validates bearer token", async () => {
     authServiceMock.verifyUser.mockResolvedValue({
       id: "user-1",

@@ -4,9 +4,17 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { API_PREFIX } from "./config/constants.js";
-import { env } from "./config/env.js";
+import { env, normalizeOrigin } from "./config/env.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { apiRouter } from "./routes/index.js";
+
+function isAllowedCorsOrigin(origin?: string | null) {
+  if (!origin) {
+    return true;
+  }
+
+  return env.clientOrigins.includes(normalizeOrigin(origin));
+}
 
 export function createApp() {
   const app = express();
@@ -16,7 +24,10 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.clientOrigins,
+      origin(origin, callback) {
+        callback(null, isAllowedCorsOrigin(origin));
+      },
+      optionsSuccessStatus: 204,
       credentials: true
     })
   );
