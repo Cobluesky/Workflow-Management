@@ -49,9 +49,12 @@
 +-- prisma/schema.prisma
 +-- Dockerfile
 +-- package.json
-+-- Requirements.md
-+-- TODO.md
-`-- API_SPEC.md
++-- DOCS/
+|   +-- API_SPEC.md
+|   +-- DEPLOYMENT.md
+|   +-- Requirements.md
+|   `-- TODO.md
+`-- README.md
 ```
 
 ## 3. 목표 아키텍처

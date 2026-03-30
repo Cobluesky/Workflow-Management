@@ -23,14 +23,14 @@
 
 ### 멀티라인 env 파일
 - `APP_ENV_FILE`
-  - 예시 파일: `deploy/env/timetable-web.env.example`
+  - 예시 파일: `../deploy/env/timetable-web.env.example`
 - `AUTH_ENV_FILE`
-  - 예시 파일: `deploy/env/workspace-auth-server.env.example`
+  - 예시 파일: `../deploy/env/workspace-auth-server.env.example`
 
 현재 workflow는 개별 환경 변수를 하나씩 나열하지 않고, 위 두 secret의 내용을 OCI 서버에 `.env` 파일로 기록한 뒤 `docker run --env-file`로 사용한다.
 
 ## Nginx 설정
-- 예시 파일: `deploy/nginx/workspace.p-e.kr.conf.example`
+- 예시 파일: `../deploy/nginx/workspace.p-e.kr.conf.example`
 - 인증서 경로는 실제 Certbot 또는 운영 경로로 교체
 - `proxy_pass` 대상은 둘 다 `127.0.0.1`
 

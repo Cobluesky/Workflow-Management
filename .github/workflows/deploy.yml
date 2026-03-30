@@ -86,9 +86,13 @@ jobs:
             ${{ secrets.AUTH_ENV_FILE }}
             EOF
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest
+            sudo docker run --rm --add-host=host.docker.internal:host-gateway \
+              --env-file /opt/workspace/env/workspace-auth-server.env \
+              ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest \
+              sh -lc "./node_modules/.bin/prisma migrate deploy"
             sudo docker stop workspace-auth-server || true
             sudo docker rm workspace-auth-server || true
-            sudo docker run -d --restart unless-stopped -p 127.0.0.1:4000:4000 --name workspace-auth-server \
+            sudo docker run -d --restart unless-stopped --add-host=host.docker.internal:host-gateway -p 127.0.0.1:4000:4000 --name workspace-auth-server \
               --env-file /opt/workspace/env/workspace-auth-server.env \
               ${{ secrets.DOCKER_USERNAME }}/workspace-auth-server:latest
             sudo docker image prune -f || true
@@ -168,7 +172,7 @@ jobs:
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
             sudo docker stop timetable-web || true
             sudo docker rm timetable-web || true
-            sudo docker run -d --restart unless-stopped -p 127.0.0.1:3000:3000 --name timetable-web \
+            sudo docker run -d --restart unless-stopped --add-host=host.docker.internal:host-gateway -p 127.0.0.1:3000:3000 --name timetable-web \
               --env-file /opt/workspace/env/timetable-web.env \
               ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
             sudo docker image prune -f || true

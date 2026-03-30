@@ -39,19 +39,7 @@ function successResponse(data: TimetableResponseData, status = 200) {
   );
 }
 
-async function resolveUserId(req: Request, explicitUserId?: unknown) {
-  if (typeof explicitUserId === "number" && Number.isInteger(explicitUserId)) {
-    return explicitUserId;
-  }
-
-  if (typeof explicitUserId === "string" && explicitUserId.trim()) {
-    const parsed = Number(explicitUserId);
-
-    if (Number.isInteger(parsed)) {
-      return parsed;
-    }
-  }
-
+async function resolveUserId(req: Request) {
   const appUser = await requireAppUser(req);
 
   if (appUser instanceof NextResponse) {
@@ -103,7 +91,7 @@ export async function POST(req: Request) {
       return errorResponse("INVALID_PAYLOAD", "시간표 요청 형식이 올바르지 않습니다.", 400);
     }
 
-    const resolvedUserId = await resolveUserId(req, body?.userId);
+    const resolvedUserId = await resolveUserId(req);
 
     if (resolvedUserId instanceof NextResponse) {
       return resolvedUserId;
@@ -174,8 +162,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const resolvedUserId = await resolveUserId(req, searchParams.get("userId"));
+    const resolvedUserId = await resolveUserId(req);
 
     if (resolvedUserId instanceof NextResponse) {
       return resolvedUserId;

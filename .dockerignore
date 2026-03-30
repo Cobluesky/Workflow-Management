@@ -10,8 +10,6 @@ coverage
 npm-debug.log
 *.log
 README.md
-API_SPEC.md
-Requirements.md
-TODO.md
+DOCS
 tests
 auth-server

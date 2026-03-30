@@ -59,6 +59,7 @@ describe("timetable route", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: 999,
           lessons: [
             {
               subjectName: "자료구조",
