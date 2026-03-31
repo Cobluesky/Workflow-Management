@@ -36,6 +36,19 @@ async function readJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function formatAuthError(payload: any, fallbackMessage: string) {
+  const errorMessage = payload?.error?.message;
+  const formErrors = payload?.details?.formErrors as string[] | undefined;
+  const fieldErrors = payload?.details?.fieldErrors as Record<string, string[] | undefined> | undefined;
+
+  const prioritizedFieldMessage =
+    fieldErrors?.password?.[0] ??
+    fieldErrors?.email?.[0] ??
+    fieldErrors?.name?.[0];
+
+  return prioritizedFieldMessage ?? formErrors?.[0] ?? errorMessage ?? fallbackMessage;
+}
+
 function readStoredAccessToken() {
   if (typeof window === "undefined") {
     return null;
@@ -211,7 +224,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       const payload = await readJson<any>(response);
 
       if (!response.ok) {
-        throw new Error(payload?.error?.message || "로그인에 실패했습니다.");
+        throw new Error(formatAuthError(payload, "로그인에 실패했습니다."));
       }
 
       await applySession(payload.data.accessToken);
@@ -233,7 +246,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       const payload = await readJson<any>(response);
 
       if (!response.ok) {
-        throw new Error(payload?.error?.message || "회원가입에 실패했습니다.");
+        throw new Error(formatAuthError(payload, "회원가입에 실패했습니다."));
       }
 
       await login(input.email, input.password);

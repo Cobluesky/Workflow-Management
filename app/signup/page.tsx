@@ -1,9 +1,11 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/app/Providers";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -17,20 +19,59 @@ export default function SignUpPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const fieldErrors = useMemo(() => {
+    const trimmedName = formData.name.trim();
+    const trimmedEmail = formData.email.trim();
+
+    return {
+      name:
+        !trimmedName
+          ? "이름을 입력해주세요."
+          : trimmedName.length > 50
+            ? "이름은 50자 이하로 입력해주세요."
+            : "",
+      email:
+        !trimmedEmail
+          ? "이메일을 입력해주세요."
+          : !EMAIL_PATTERN.test(trimmedEmail)
+            ? "올바른 이메일 형식으로 입력해주세요."
+            : "",
+      password:
+        !formData.password
+          ? "비밀번호를 입력해주세요."
+          : formData.password.length < 8
+            ? "비밀번호는 8자 이상이어야 합니다."
+            : "",
+      confirmPassword:
+        !formData.confirmPassword
+          ? "비밀번호 확인을 입력해주세요."
+          : formData.password !== formData.confirmPassword
+            ? "비밀번호가 일치하지 않습니다."
+            : "",
+    };
+  }, [formData]);
+
+  const isFormValid = Object.values(fieldErrors).every((value) => !value);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (formData.password !== formData.confirmPassword) {
-      return setErrorMsg("비밀번호가 일치하지 않습니다.");
+    const trimmedName = formData.name.trim();
+    const trimmedEmail = formData.email.trim();
+
+    const firstError = Object.values(fieldErrors).find(Boolean);
+
+    if (firstError) {
+      return setErrorMsg(firstError);
     }
 
     setIsLoading(true);
 
     try {
       await register({
-        name: formData.name,
-        email: formData.email,
+        name: trimmedName,
+        email: trimmedEmail,
         password: formData.password,
       });
       router.push("/");
@@ -55,11 +96,16 @@ export default function SignUpPage() {
             <input
               type="text"
               required
+              maxLength={50}
+              aria-invalid={Boolean(fieldErrors.name)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               placeholder="홍길동"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
+            {fieldErrors.name && formData.name ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>
+            ) : null}
           </div>
 
           <div>
@@ -67,11 +113,17 @@ export default function SignUpPage() {
             <input
               type="email"
               required
+              inputMode="email"
+              autoComplete="email"
+              aria-invalid={Boolean(fieldErrors.email)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               placeholder="user@example.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
+            {fieldErrors.email && formData.email ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>
+            ) : null}
           </div>
 
           <div>
@@ -79,11 +131,18 @@ export default function SignUpPage() {
             <input
               type="password"
               required
+              minLength={8}
+              autoComplete="new-password"
+              aria-invalid={Boolean(fieldErrors.password)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="password"
+              placeholder="8자 이상 입력"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
+            <p className="mt-1 text-xs text-gray-500">비밀번호는 8자 이상이어야 합니다.</p>
+            {fieldErrors.password && formData.password ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>
+            ) : null}
           </div>
 
           <div>
@@ -91,19 +150,25 @@ export default function SignUpPage() {
             <input
               type="password"
               required
+              minLength={8}
+              autoComplete="new-password"
+              aria-invalid={Boolean(fieldErrors.confirmPassword)}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              placeholder="password"
+              placeholder="비밀번호 다시 입력"
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
             />
+            {fieldErrors.confirmPassword && formData.confirmPassword ? (
+              <p className="mt-1 text-xs text-red-500">{fieldErrors.confirmPassword}</p>
+            ) : null}
           </div>
 
           {errorMsg ? <p className="text-red-500 text-sm font-medium">{errorMsg}</p> : null}
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors disabled:bg-indigo-400"
+            disabled={isLoading || !isFormValid}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition-colors disabled:cursor-not-allowed disabled:bg-indigo-400"
           >
             {isLoading ? "가입 중..." : "가입하기"}
           </button>
