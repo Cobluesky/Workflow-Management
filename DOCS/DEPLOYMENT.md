@@ -1,17 +1,24 @@
 # 운영 배포 가이드
 
-이 문서는 현재 저장소 기준 운영 배포 구조와 Nginx 리버스 프록시 설정 포인트를 정리한다.
+이 문서는 현재 OCI 운영 환경 기준의 배포 구조, 환경 변수 규칙, Nginx 프록시 구성, 점검 절차를 정리한다.
 
-## 목표 구성
-- `app.workspace.p-e.kr` -> `timetable-web` 컨테이너 -> `127.0.0.1:3000`
-- `auth.workspace.p-e.kr` -> `workspace-auth-server` 컨테이너 -> `127.0.0.1:4000`
-- 외부 공개 포트는 `80`, `443`만 사용
-- `3000`, `4000`은 호스트 로컬 루프백에만 바인딩
+## 현재 운영 구성
+- `app.workspace.p-e.kr` -> `timetable-web` -> `127.0.0.1:3000`
+- `auth.workspace.p-e.kr` -> `workspace-auth-server` -> `127.0.0.1:4000`
+- 공개 포트는 `80`, `443`만 사용한다.
+- MariaDB는 OCI 호스트 OS에서 직접 동작한다.
+- Docker 컨테이너에서는 호스트 DB에 `host.docker.internal`로 접속한다.
 
-## GitHub Actions 동작
-- 루트 앱 이미지는 `timetable-web:latest`
-- 인증 서버 이미지는 `workspace-auth-server:latest`
-- workflow는 `auth-server`를 먼저 배포한 뒤 앱을 배포
+## GitHub Actions 배포 흐름
+- 루트 앱 이미지는 `timetable-web:latest`로 빌드한다.
+- 인증 서버 이미지는 `workspace-auth-server:latest`로 빌드한다.
+- 인증 서버 배포 시:
+  - 서버에 `workspace-auth-server.env`를 생성한다.
+  - one-off 컨테이너로 `prisma migrate deploy`를 먼저 실행한다.
+  - migration 성공 후 기존 `workspace-auth-server` 컨테이너를 교체한다.
+- 앱 배포 시:
+  - 서버에 `timetable-web.env`를 생성한다.
+  - 기존 `timetable-web` 컨테이너를 교체한다.
 
 ## GitHub Secrets
 ### 공통
@@ -21,65 +28,80 @@
 - `SERVER_USER`
 - `SERVER_SSH_KEY`
 
-### 멀티라인 env 파일
+### env 파일 전체를 저장하는 secret
 - `APP_ENV_FILE`
-  - 예시 파일: `../deploy/env/timetable-web.env.example`
 - `AUTH_ENV_FILE`
-  - 예시 파일: `../deploy/env/workspace-auth-server.env.example`
 
-현재 workflow는 개별 환경 변수를 하나씩 나열하지 않고, 위 두 secret의 내용을 OCI 서버에 `.env` 파일로 기록한 뒤 `docker run --env-file`로 사용한다.
+중요:
+- 현재 배포는 개별 key-value secret이 아니라 env 파일 전체를 멀티라인 secret으로 저장하는 방식이다.
+- `docker run --env-file`을 사용하므로 값은 `KEY=value` 형식으로 넣는다.
+- 운영 env 값에는 바깥따옴표를 넣지 않는다.
 
-## Nginx 설정
-- 예시 파일: `../deploy/nginx/workspace.p-e.kr.conf.example`
-- 인증서 경로는 실제 Certbot 또는 운영 경로로 교체
-- `proxy_pass` 대상은 둘 다 `127.0.0.1`
-
-## env 파일 준비
+## 운영 env 예시
 ### APP_ENV_FILE
 ```env
-DATABASE_URL="mysql://app_user:app_password@db-host:3306/timetable_app"
-AUTH_SERVER_URL="https://auth.workspace.p-e.kr"
-NEXT_PUBLIC_AUTH_SERVER_URL="https://auth.workspace.p-e.kr"
+DATABASE_URL=mysql://timetable_user:app_password@host.docker.internal:3306/timetable_db
+AUTH_SERVER_URL=https://auth.workspace.p-e.kr
+NEXT_PUBLIC_AUTH_SERVER_URL=https://auth.workspace.p-e.kr
 ```
 
 ### AUTH_ENV_FILE
 ```env
 PORT=4000
 NODE_ENV=production
-DATABASE_URL="mysql://auth_user:auth_password@db-host:3306/workspace_auth"
-JWT_ACCESS_SECRET="replace-with-strong-access-secret"
-JWT_REFRESH_SECRET="replace-with-strong-refresh-secret"
-JWT_ISSUER="https://auth.workspace.p-e.kr"
-JWT_AUDIENCE="workspace-clients"
+DATABASE_URL=mysql://workspace_auth_user:auth_password@host.docker.internal:3306/workspace_auth
+JWT_ACCESS_SECRET=replace-with-strong-access-secret
+JWT_REFRESH_SECRET=replace-with-strong-refresh-secret
+JWT_ISSUER=https://auth.workspace.p-e.kr
+JWT_AUDIENCE=workspace-clients
 ACCESS_TOKEN_TTL_MINUTES=15
 REFRESH_TOKEN_TTL_DAYS=30
-COOKIE_DOMAIN=".workspace.p-e.kr"
+COOKIE_DOMAIN=.workspace.p-e.kr
 COOKIE_SECURE=true
-CLIENT_ORIGINS="https://app.workspace.p-e.kr,https://project1.workspace.p-e.kr"
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
-GOOGLE_CALLBACK_URL="https://auth.workspace.p-e.kr/api/v1/auth/callback/google"
-KAKAO_CLIENT_ID=""
-KAKAO_CLIENT_SECRET=""
-KAKAO_CALLBACK_URL="https://auth.workspace.p-e.kr/api/v1/auth/callback/kakao"
-GITHUB_CLIENT_ID=""
-GITHUB_CLIENT_SECRET=""
-GITHUB_CALLBACK_URL="https://auth.workspace.p-e.kr/api/v1/auth/callback/github"
+CLIENT_ORIGINS=https://app.workspace.p-e.kr,https://project1.workspace.p-e.kr
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=https://auth.workspace.p-e.kr/api/v1/auth/callback/google
+KAKAO_CLIENT_ID=
+KAKAO_CLIENT_SECRET=
+KAKAO_CALLBACK_URL=https://auth.workspace.p-e.kr/api/v1/auth/callback/kakao
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITHUB_CALLBACK_URL=https://auth.workspace.p-e.kr/api/v1/auth/callback/github
 ```
 
-## 배포 후 확인
+## Nginx
+- 예시 파일: `../deploy/nginx/workspace.p-e.kr.conf.example`
+- 운영에서는 Certbot이 발급한 실제 인증서 경로를 사용한다.
+- 현재 기준으로 `auth.workspace.p-e.kr`와 `app.workspace.p-e.kr`는 각각 별도 인증서를 사용한다.
+
+## 운영 점검 명령
 ```bash
 docker ps
 docker logs workspace-auth-server --tail 100
 docker logs timetable-web --tail 100
 curl -i http://127.0.0.1:4000/health
-curl -I https://auth.workspace.p-e.kr
+curl -i https://auth.workspace.p-e.kr/health
 curl -I https://app.workspace.p-e.kr
 ```
 
-## 정상 상태 기준
-- `workspace-auth-server`가 `Up`
-- `timetable-web`가 `Up`
-- `http://127.0.0.1:4000/health`가 `200`
-- `https://auth.workspace.p-e.kr`가 Nginx를 통해 `4000`으로 전달
-- `https://app.workspace.p-e.kr`가 Nginx를 통해 `3000`으로 전달
+## CORS 점검
+Auth Server CORS가 정상인지 확인하려면:
+
+```bash
+curl -i -X OPTIONS "https://auth.workspace.p-e.kr/api/v1/auth/refresh" \
+  -H "Origin: https://app.workspace.p-e.kr" \
+  -H "Access-Control-Request-Method: POST"
+```
+
+정상이라면 아래 헤더가 포함되어야 한다.
+- `Access-Control-Allow-Origin: https://app.workspace.p-e.kr`
+- `Access-Control-Allow-Credentials: true`
+
+## 현재 운영 확인 상태
+- `workspace-auth-server` 기동 확인 완료
+- `timetable-web` 기동 확인 완료
+- `auth.workspace.p-e.kr` HTTPS 및 인증서 정상 확인 완료
+- `auth.workspace.p-e.kr/health` 응답 확인 완료
+- Auth Server CORS preflight 정상 확인 완료
+- 일반 로그인, 회원가입, OAuth 로그인 브라우저 검증 완료

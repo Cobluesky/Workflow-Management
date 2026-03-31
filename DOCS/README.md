@@ -1,7 +1,10 @@
 # DOCS
 
-## 루트 문서
+이 폴더는 현재 프로젝트의 아키텍처, API, 배포, 운영 검증, 리뷰 규칙 문서를 모아둔 기준 문서 디렉터리다.
+
+## 핵심 문서
 - `ARCHITECTURE.md`
+- `HANDOUT.md`
 - `API_SPEC.md`
 - `DEPLOYMENT.md`
 - `Requirements.md`
@@ -12,12 +15,22 @@
 - `auth-server/README.md`
 - `auth-server/VERIFICATION.md`
 
-## 리뷰 규칙
+## 코드 리뷰 규칙
 - `code-review-rules/base.md`
 - `code-review-rules/forbidden.md`
 - `code-review-rules/examples.md`
 
-## 설정 예시
+## 배포 예시 파일
 - `../deploy/env/timetable-web.env.example`
 - `../deploy/env/workspace-auth-server.env.example`
 - `../deploy/nginx/workspace.p-e.kr.conf.example`
+
+## 현재 운영 기준 요약
+- 앱 도메인: `https://app.workspace.p-e.kr`
+- 인증 도메인: `https://auth.workspace.p-e.kr`
+- 앱 컨테이너: `timetable-web`
+- 인증 컨테이너: `workspace-auth-server`
+- 앱 DB: `timetable_db`
+- 인증 DB: `workspace_auth`
+- 인증 서버 CORS 및 HTTPS 적용 완료
+- 일반 로그인, 회원가입, Refresh, OAuth 브라우저 검증 완료

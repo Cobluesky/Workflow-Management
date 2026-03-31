@@ -10,13 +10,15 @@ datasource db {
 
 // 사용자 테이블
 model User {
-  id        Int      @id @default(autoincrement())
-  authUserId String? @unique
-  email     String   @unique
-  password  String 
-  alias     String?
-  lessons   Lesson[] 
-  createdAt DateTime @default(now())
+  id                         Int                       @id @default(autoincrement())
+  authUserId                 String?                   @unique
+  email                      String                    @unique
+  password                   String
+  alias                      String?
+  workspaceModulesInitialized Boolean                  @default(false)
+  lessons                    Lesson[]
+  modulePreferences          WorkspaceModulePreference[]
+  createdAt                  DateTime                  @default(now())
 }
 
 // 시간표 수업 테이블 (실제 시간이 아닌 '교시' 기준)
@@ -37,4 +39,16 @@ model Lesson {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model WorkspaceModulePreference {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  moduleId  String
+  position  Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([userId, position])
 }

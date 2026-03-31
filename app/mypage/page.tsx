@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/Providers";
+import AppShell from "@/app/AppShell";
 
 export default function MyPage() {
   const { user, accessToken, isLoading: authLoading, updateAlias } = useAuth();
@@ -47,7 +48,11 @@ export default function MyPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center items-center p-4">
+    <AppShell
+      title="마이페이지"
+      description="기본 계정 정보를 확인하고 서비스에서 사용할 별명을 관리하는 개인 설정 모듈입니다."
+    >
+    <div className="min-h-[60vh] flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">마이페이지</h1>
         <form onSubmit={handleUpdate} className="space-y-6">
@@ -81,5 +86,6 @@ export default function MyPage() {
         </form>
       </div>
     </div>
+    </AppShell>
   );
 }

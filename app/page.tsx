@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from "@/app/Providers";
+import AppShell from "@/app/AppShell";
 
 type Lesson = {
   id: number;
@@ -197,7 +198,11 @@ export default function Home() {
   };
 
 return (
-    <main className="min-h-screen p-8 flex flex-col items-center">
+    <AppShell
+      title="시간표"
+      description="주간 시간표를 구성하고 저장하는 메인 모듈입니다. 앞으로 캘린더, 할 일, 프로젝트 같은 추가 모듈도 같은 워크스페이스 셸 안에서 확장할 수 있습니다."
+    >
+    <main className="flex flex-col items-center">
       <div className="w-full max-w-5xl mb-6 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
@@ -365,5 +370,6 @@ return (
       )}
 
     </main>
+    </AppShell>
   );
 }
