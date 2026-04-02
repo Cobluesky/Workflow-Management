@@ -93,10 +93,6 @@ function createDefaultForm(date: Date): EventFormState {
   };
 }
 
-function parseDateKey(dateKey: string) {
-  return new Date(`${dateKey}T00:00:00`);
-}
-
 function formatTimeLabel(value: string, isAllDay: boolean) {
   if (isAllDay) {
     return "종일";
@@ -154,7 +150,6 @@ export default function CalendarModule() {
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const [formState, setFormState] = useState<EventFormState>(() => createDefaultForm(new Date()));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
 
   useEffect(() => {
     if (isLoading) {
@@ -169,7 +164,6 @@ export default function CalendarModule() {
     let cancelled = false;
 
     async function loadEvents() {
-      setIsCalendarLoading(true);
       setErrorMessage(null);
 
       try {
@@ -197,10 +191,6 @@ export default function CalendarModule() {
         if (!cancelled) {
           setErrorMessage(error instanceof Error ? error.message : "캘린더 일정을 불러오지 못했습니다.");
         }
-      } finally {
-        if (!cancelled) {
-          setIsCalendarLoading(false);
-        }
       }
     }
 
@@ -212,9 +202,6 @@ export default function CalendarModule() {
   }, [accessToken, currentMonth, isLoading]);
 
   const calendarDays = buildCalendarDays(currentMonth);
-  const selectedEvents = events
-    .filter((event) => toLocalDateKey(event.startsAt) === selectedDateKey)
-    .sort((left, right) => left.startsAt.localeCompare(right.startsAt));
 
   function openCreateModal(date: Date) {
     setEditingEventId(null);
@@ -330,7 +317,7 @@ export default function CalendarModule() {
       title="캘린더"
       description="월간 일정과 개인 이벤트를 관리하는 캘린더 모듈입니다. 현재는 앱 DB를 사용하고, 이후 calendar_db로 분리할 수 있게 경계를 잡아둔 상태입니다."
     >
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex flex-col gap-6">
         <section className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
@@ -441,87 +428,11 @@ export default function CalendarModule() {
           </div>
         </section>
 
-        <aside className="flex flex-col gap-6">
-          <section className="flex flex-col gap-6 rounded-3xl border border-slate-100 bg-white p-7 shadow-sm">
-            <div className="flex flex-col items-center justify-center rounded-2xl bg-slate-50 py-6 text-center">
-              <h3 className="text-2xl font-bold tracking-tight text-slate-900">
-                {new Intl.DateTimeFormat("ko-KR", {
-                  month: "long",
-                  day: "numeric",
-                }).format(parseDateKey(selectedDateKey))}
-              </h3>
-              <p className="mt-1 text-sm font-medium text-slate-500">
-                {new Intl.DateTimeFormat("ko-KR", {
-                  weekday: "long",
-                }).format(parseDateKey(selectedDateKey))}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-lg font-bold text-slate-900">일정 목록</h3>
-                <button
-                  type="button"
-                  onClick={() => openCreateModal(parseDateKey(selectedDateKey))}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200"
-                >
-                  + 추가
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {isCalendarLoading ? (
-                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 py-10 text-sm font-medium text-slate-400">
-                    불러오는 중...
-                  </div>
-                ) : selectedEvents.length === 0 ? (
-                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 py-10 text-sm font-medium text-slate-400">
-                    등록된 일정이 없습니다
-                  </div>
-                ) : (
-                  selectedEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() => openEditModal(event)}
-                      className="group flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition-all hover:border-indigo-200 hover:shadow-md"
-                    >
-                      <div className="flex w-full items-start justify-between gap-3">
-                        <div className="flex flex-col">
-                          <p className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</p>
-                          <p className="mt-0.5 text-xs font-semibold text-slate-500">
-                            {formatTimeLabel(event.startsAt, event.isAllDay)} - {formatTimeLabel(event.endsAt, event.isAllDay)}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${COLOR_STYLES[event.colorToken] ?? COLOR_STYLES.indigo}`}>
-                          {event.colorToken}
-                        </span>
-                      </div>
-                      {event.description ? (
-                        <p className="line-clamp-2 text-sm leading-6 text-slate-500">{event.description}</p>
-                      ) : null}
-                      {event.location ? (
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
-                          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span className="truncate">{event.location}</span>
-                        </div>
-                      ) : null}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
+        {errorMessage && !isModalOpen ? (
+          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 shadow-sm">
+            {errorMessage}
           </section>
-
-          {errorMessage && !isModalOpen ? (
-            <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 shadow-sm">
-              {errorMessage}
-            </section>
-          ) : null}
-        </aside>
+        ) : null}
       </div>
 
       {isModalOpen ? (
