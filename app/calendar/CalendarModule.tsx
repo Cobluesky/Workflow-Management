@@ -330,48 +330,51 @@ export default function CalendarModule() {
       title="캘린더"
       description="월간 일정과 개인 이벤트를 관리하는 캘린더 모듈입니다. 현재는 앱 DB를 사용하고, 이후 calendar_db로 분리할 수 있게 경계를 잡아둔 상태입니다."
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Calendar</p>
-              <h2 className="mt-2 text-3xl font-semibold text-slate-900">{formatMonthTitle(currentMonth)}</h2>
-              <p className="mt-2 text-sm text-slate-500">날짜를 눌러 일정 추가, 기존 일정을 눌러 수정할 수 있습니다.</p>
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900">{formatMonthTitle(currentMonth)}</h2>
+              <p className="text-sm font-medium text-slate-500">날짜를 눌러 일정을 추가하거나 관리하세요.</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-                className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-              >
-                이전
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentMonth(new Date())}
-                className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-              >
-                오늘
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-                className="rounded-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-              >
-                다음
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center rounded-full border border-slate-200 p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-100"
+                >
+                  이전
+                </button>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentMonth(new Date())}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-100"
+                >
+                  오늘
+                </button>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-100"
+                >
+                  다음
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => openCreateModal(new Date())}
-                className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+                className="rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-300 active:scale-95"
               >
-                일정 추가
+                + 새 일정
               </button>
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <div className="mt-8 grid grid-cols-7 gap-3 text-center text-sm font-bold uppercase tracking-wider text-slate-400">
             {WEEKDAY_LABELS.map((label) => (
               <div key={label} className="py-2">
                 {label}
@@ -379,7 +382,7 @@ export default function CalendarModule() {
             ))}
           </div>
 
-          <div className="mt-2 grid grid-cols-7 gap-2">
+          <div className="mt-4 grid grid-cols-7 gap-3">
             {calendarDays.map(({ date, dateKey, isCurrentMonth, isToday }) => {
               const dayEvents = events
                 .filter((event) => toLocalDateKey(event.startsAt) === dateKey)
@@ -393,24 +396,28 @@ export default function CalendarModule() {
                     setSelectedDateKey(dateKey);
                     openCreateModal(date);
                   }}
-                  className={`min-h-[140px] rounded-2xl border p-3 text-left transition-colors ${
+                  className={`group min-h-[150px] flex flex-col rounded-2xl border p-3 text-left transition-all duration-200 ${
                     selectedDateKey === dateKey
-                      ? "border-indigo-200 bg-indigo-50/70"
-                      : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
-                  } ${!isCurrentMonth ? "opacity-50" : ""}`}
+                      ? "border-indigo-300 bg-indigo-50/50 shadow-sm"
+                      : "border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50 hover:shadow-sm"
+                  } ${!isCurrentMonth ? "opacity-40" : ""}`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex w-full items-start justify-between">
                     <span
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
-                        isToday ? "bg-indigo-600 text-white" : "text-slate-700"
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
+                        isToday ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-700 group-hover:text-indigo-600"
                       }`}
                     >
                       {date.getDate()}
                     </span>
-                    <span className="text-[11px] font-medium text-slate-400">{dayEvents.length > 0 ? `${dayEvents.length}건` : ""}</span>
+                    {dayEvents.length > 0 ? (
+                      <span className="mt-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                        {dayEvents.length}
+                      </span>
+                    ) : null}
                   </div>
 
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 flex w-full flex-col gap-1.5">
                     {dayEvents.slice(0, 3).map((event) => (
                       <div
                         key={event.id}
@@ -419,13 +426,14 @@ export default function CalendarModule() {
                           setSelectedDateKey(dateKey);
                           openEditModal(event);
                         }}
-                        className={`rounded-xl border px-2 py-2 text-xs ${COLOR_STYLES[event.colorToken] ?? COLOR_STYLES.indigo}`}
+                        className={`w-full rounded-lg border px-2.5 py-1.5 text-xs transition-transform hover:scale-[1.02] ${COLOR_STYLES[event.colorToken] ?? COLOR_STYLES.indigo}`}
                       >
-                        <p className="truncate font-semibold">{event.title}</p>
-                        <p className="mt-1 truncate opacity-80">{formatTimeLabel(event.startsAt, event.isAllDay)}</p>
+                        <p className="truncate font-bold">{event.title}</p>
                       </div>
                     ))}
-                    {dayEvents.length > 3 ? <p className="text-xs font-medium text-slate-400">+ {dayEvents.length - 3}개 더 보기</p> : null}
+                    {dayEvents.length > 3 ? (
+                      <p className="px-1 text-xs font-bold text-slate-400">+{dayEvents.length - 3} 더보기</p>
+                    ) : null}
                   </div>
                 </button>
               );
@@ -433,72 +441,83 @@ export default function CalendarModule() {
           </div>
         </section>
 
-        <aside className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Selected Date</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">
-              {new Intl.DateTimeFormat("ko-KR", {
-                month: "long",
-                day: "numeric",
-                weekday: "long",
-              }).format(parseDateKey(selectedDateKey))}
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">선택한 날짜의 개인 일정을 빠르게 확인하고 수정할 수 있습니다.</p>
-          </section>
+        <aside className="flex flex-col gap-6">
+          <section className="flex flex-col gap-6 rounded-3xl border border-slate-100 bg-white p-7 shadow-sm">
+            <div className="flex flex-col items-center justify-center rounded-2xl bg-slate-50 py-6 text-center">
+              <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+                {new Intl.DateTimeFormat("ko-KR", {
+                  month: "long",
+                  day: "numeric",
+                }).format(parseDateKey(selectedDateKey))}
+              </h3>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                {new Intl.DateTimeFormat("ko-KR", {
+                  weekday: "long",
+                }).format(parseDateKey(selectedDateKey))}
+              </p>
+            </div>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Daily Agenda</p>
-                <h3 className="mt-2 text-xl font-semibold text-slate-900">일정 목록</h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-lg font-bold text-slate-900">일정 목록</h3>
+                <button
+                  type="button"
+                  onClick={() => openCreateModal(parseDateKey(selectedDateKey))}
+                  className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-200"
+                >
+                  + 추가
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => openCreateModal(parseDateKey(selectedDateKey))}
-                className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
-              >
-                선택 날짜에 추가
-              </button>
-            </div>
 
-            <div className="mt-5 space-y-3">
-              {isCalendarLoading ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">
-                  캘린더 일정을 불러오는 중입니다.
-                </div>
-              ) : selectedEvents.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-400">
-                  선택한 날짜에 등록된 일정이 없습니다.
-                </div>
-              ) : (
-                selectedEvents.map((event) => (
-                  <button
-                    key={event.id}
-                    type="button"
-                    onClick={() => openEditModal(event)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-200 hover:bg-slate-50"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-slate-900">{event.title}</p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          {formatTimeLabel(event.startsAt, event.isAllDay)} - {formatTimeLabel(event.endsAt, event.isAllDay)}
-                        </p>
+              <div className="flex flex-col gap-3">
+                {isCalendarLoading ? (
+                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 py-10 text-sm font-medium text-slate-400">
+                    불러오는 중...
+                  </div>
+                ) : selectedEvents.length === 0 ? (
+                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 py-10 text-sm font-medium text-slate-400">
+                    등록된 일정이 없습니다
+                  </div>
+                ) : (
+                  selectedEvents.map((event) => (
+                    <button
+                      key={event.id}
+                      type="button"
+                      onClick={() => openEditModal(event)}
+                      className="group flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition-all hover:border-indigo-200 hover:shadow-md"
+                    >
+                      <div className="flex w-full items-start justify-between gap-3">
+                        <div className="flex flex-col">
+                          <p className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{event.title}</p>
+                          <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                            {formatTimeLabel(event.startsAt, event.isAllDay)} - {formatTimeLabel(event.endsAt, event.isAllDay)}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${COLOR_STYLES[event.colorToken] ?? COLOR_STYLES.indigo}`}>
+                          {event.colorToken}
+                        </span>
                       </div>
-                      <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${COLOR_STYLES[event.colorToken] ?? COLOR_STYLES.indigo}`}>
-                        {event.colorToken}
-                      </span>
-                    </div>
-                    {event.location ? <p className="mt-3 text-sm text-slate-500">{event.location}</p> : null}
-                    {event.description ? <p className="mt-2 text-sm leading-6 text-slate-500">{event.description}</p> : null}
-                  </button>
-                ))
-              )}
+                      {event.description ? (
+                        <p className="line-clamp-2 text-sm leading-6 text-slate-500">{event.description}</p>
+                      ) : null}
+                      {event.location ? (
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      ) : null}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </section>
 
-          {errorMessage ? (
-            <section className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700 shadow-sm">
+          {errorMessage && !isModalOpen ? (
+            <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 shadow-sm">
               {errorMessage}
             </section>
           ) : null}
@@ -506,121 +525,128 @@ export default function CalendarModule() {
       </div>
 
       {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Calendar Event</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{editingEventId ? "일정 수정" : "새 일정 추가"}</h3>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm transition-opacity">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-900/5">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+              <h3 className="text-xl font-bold text-slate-900">{editingEventId ? "일정 수정" : "새 일정 추가"}</h3>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
                 aria-label="일정 편집 닫기"
+                className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
               >
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M4.22 4.22a.75.75 0 011.06 0L10 8.94l4.72-4.72a.75.75 0 111.06 1.06L11.06 10l4.72 4.72a.75.75 0 11-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 01-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 010-1.06z" />
                 </svg>
               </button>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Title</label>
-                <input
-                  value={formState.title}
-                  onChange={(event) => setFormState((current) => ({ ...current, title: event.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300"
-                  placeholder="예: 팀 미팅"
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
+            <div className="p-6">
+              {errorMessage ? (
+                <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm">
+                  {errorMessage}
+                </div>
+              ) : null}
+              <div className="space-y-5">
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Date</label>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-500">제목</label>
                   <input
-                    type="date"
-                    value={formState.date}
-                    onChange={(event) => setFormState((current) => ({ ...current, date: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300"
+                    value={formState.title}
+                    onChange={(event) => setFormState((current) => ({ ...current, title: event.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="일정 제목을 입력하세요"
                   />
                 </div>
 
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={formState.isAllDay}
-                    onChange={(event) => setFormState((current) => ({ ...current, isAllDay: event.target.checked }))}
-                  />
-                  종일 일정
-                </label>
-              </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-slate-500">날짜</label>
+                    <input
+                      type="date"
+                      value={formState.date}
+                      onChange={(event) => setFormState((current) => ({ ...current, date: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                    />
+                  </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-end pb-1">
+                    <label className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100">
+                      <input
+                        type="checkbox"
+                        checked={formState.isAllDay}
+                        onChange={(event) => setFormState((current) => ({ ...current, isAllDay: event.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                      />
+                      하루 종일
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-slate-500">시작 시간</label>
+                    <input
+                      type="time"
+                      value={formState.startsAt}
+                      disabled={formState.isAllDay}
+                      onChange={(event) => setFormState((current) => ({ ...current, startsAt: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold text-slate-500">종료 시간</label>
+                    <input
+                      type="time"
+                      value={formState.endsAt}
+                      disabled={formState.isAllDay}
+                      onChange={(event) => setFormState((current) => ({ ...current, endsAt: event.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Start</label>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-500">장소</label>
                   <input
-                    type="time"
-                    value={formState.startsAt}
-                    disabled={formState.isAllDay}
-                    onChange={(event) => setFormState((current) => ({ ...current, startsAt: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300 disabled:bg-slate-50"
+                    value={formState.location}
+                    onChange={(event) => setFormState((current) => ({ ...current, location: event.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="장소를 입력하세요"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">End</label>
-                  <input
-                    type="time"
-                    value={formState.endsAt}
-                    disabled={formState.isAllDay}
-                    onChange={(event) => setFormState((current) => ({ ...current, endsAt: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300 disabled:bg-slate-50"
+                  <label className="mb-1.5 block text-xs font-bold text-slate-500">메모</label>
+                  <textarea
+                    value={formState.description}
+                    onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))}
+                    className="min-h-[100px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
+                    placeholder="추가적인 내용을 적어주세요"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Location</label>
-                <input
-                  value={formState.location}
-                  onChange={(event) => setFormState((current) => ({ ...current, location: event.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300"
-                  placeholder="예: 중앙도서관 3층"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Description</label>
-                <textarea
-                  value={formState.description}
-                  onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))}
-                  className="min-h-[110px] w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition-colors focus:border-indigo-300"
-                  placeholder="일정 메모를 남겨두세요."
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Color</label>
-                <div className="flex flex-wrap gap-2">
-                  {COLOR_OPTIONS.map((colorToken) => (
-                    <button
-                      key={colorToken}
-                      type="button"
-                      onClick={() => setFormState((current) => ({ ...current, colorToken }))}
-                      className={`rounded-full border px-3 py-2 text-xs font-semibold ${COLOR_STYLES[colorToken]} ${
-                        formState.colorToken === colorToken ? "ring-2 ring-slate-900/10" : ""
-                      }`}
-                    >
-                      {colorToken}
-                    </button>
-                  ))}
+                <div>
+                  <label className="mb-2 block text-xs font-bold text-slate-500">색상 지정</label>
+                  <div className="flex flex-wrap gap-2">
+                    {COLOR_OPTIONS.map((colorToken) => (
+                      <button
+                        key={colorToken}
+                        type="button"
+                        onClick={() => setFormState((current) => ({ ...current, colorToken }))}
+                        className={`rounded-lg border px-4 py-2 text-xs font-bold capitalize transition-all ${COLOR_STYLES[colorToken]} ${
+                          formState.colorToken === colorToken ? "scale-105 shadow-md ring-2 ring-slate-400 ring-offset-1" : "opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        {colorToken}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
               <div>
                 {editingEventId ? (
                   <button
@@ -628,18 +654,18 @@ export default function CalendarModule() {
                     onClick={() => {
                       void handleDeleteEvent();
                     }}
-                    className="rounded-full px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                    className="rounded-xl px-4 py-2.5 text-sm font-bold text-rose-600 transition-colors hover:bg-rose-100"
                   >
-                    일정 삭제
+                    삭제
                   </button>
                 ) : null}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+                  className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-50"
                 >
                   취소
                 </button>
@@ -648,9 +674,9 @@ export default function CalendarModule() {
                   onClick={() => {
                     void handleSaveEvent();
                   }}
-                  className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md active:scale-95"
                 >
-                  {editingEventId ? "일정 저장" : "일정 만들기"}
+                  {editingEventId ? "저장하기" : "만들기"}
                 </button>
               </div>
             </div>
