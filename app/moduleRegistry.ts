@@ -4,6 +4,7 @@ export type WorkspaceModule = {
   href: string;
   description: string;
   availability: "live" | "planned";
+  defaultEnabled?: boolean;
   currentDatabase: string | null;
   plannedDatabase?: string;
 };
@@ -15,6 +16,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     href: "/",
     description: "주간 수업과 개인 일정을 관리하는 기본 모듈",
     availability: "live",
+    defaultEnabled: true,
     currentDatabase: "timetable_db"
   },
   {
@@ -23,6 +25,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     href: "/mypage",
     description: "계정 정보와 별명을 관리하는 사용자 설정 모듈",
     availability: "live",
+    defaultEnabled: true,
     currentDatabase: "timetable_db",
     plannedDatabase: "profile_db"
   },
@@ -30,9 +33,10 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     id: "calendar",
     label: "캘린더",
     href: "/calendar",
-    description: "월간 일정과 외부 캘린더 연동을 위한 모듈",
-    availability: "planned",
-    currentDatabase: null,
+    description: "월간 일정과 개인 이벤트를 관리하는 모듈",
+    availability: "live",
+    defaultEnabled: false,
+    currentDatabase: "timetable_db",
     plannedDatabase: "calendar_db"
   },
   {
@@ -56,7 +60,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
 ];
 
 export const DEFAULT_ENABLED_MODULE_IDS = WORKSPACE_MODULES.filter(
-  (module) => module.availability === "live"
+  (module) => module.defaultEnabled
 ).map((module) => module.id);
 
 export function getModuleByHref(pathname: string) {

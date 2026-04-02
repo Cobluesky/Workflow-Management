@@ -17,6 +17,7 @@ model User {
   alias                      String?
   workspaceModulesInitialized Boolean                  @default(false)
   lessons                    Lesson[]
+  calendarEvents             CalendarEvent[]
   modulePreferences          WorkspaceModulePreference[]
   createdAt                  DateTime                  @default(now())
 }
@@ -39,6 +40,24 @@ model Lesson {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String
+  description String?
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  colorToken  String   @default("indigo")
+  isAllDay    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startsAt])
+  @@index([userId, endsAt])
 }
 
 model WorkspaceModulePreference {
