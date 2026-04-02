@@ -15,7 +15,7 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tight text-indigo-600">
           <span className="text-2xl">M</span>
-          MyTimeTable
+          My Workflow
         </Link>
 
         <div className="flex items-center gap-6 text-sm font-medium">

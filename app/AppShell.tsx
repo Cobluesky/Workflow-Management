@@ -82,7 +82,6 @@ function SidebarModuleButton({
             <span className="rounded-full bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white">현재</span>
           ) : null}
         </div>
-        <p className="mt-1 text-[11px] tracking-[0.08em] text-slate-400">{getModuleStorageSummary(module)}</p>
       </Link>
 
       <button
@@ -214,8 +213,7 @@ export default function AppShell({ title, description, children }: AppShellProps
         <aside className="hidden w-80 shrink-0 lg:block">
           <div className="sticky top-24 space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Workspace</p>
-              <h2 className="mt-3 text-2xl font-semibold text-slate-900">MyTimeTable</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">My Workflow</h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 모듈을 자유롭게 추가하고 제거하면서, 각 모듈이 독립적인 데이터 저장소를 갖는 워크스페이스 구조입니다.
               </p>
@@ -224,7 +222,6 @@ export default function AppShell({ title, description, children }: AppShellProps
             <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="px-3 pb-2 pt-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Modules</p>
-                <p className="mt-1 text-xs text-slate-400">활성 모듈 구성은 서버에 저장되고, 저장소 계획도 함께 표시합니다.</p>
               </div>
 
               <nav className="space-y-2">
@@ -277,7 +274,6 @@ export default function AppShell({ title, description, children }: AppShellProps
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Modules</p>
-                <p className="mt-1 text-xs text-slate-400">활성 모듈 구성은 서버에 저장됩니다.</p>
               </div>
               <button
                 type="button"

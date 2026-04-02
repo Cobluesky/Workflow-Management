@@ -5,11 +5,11 @@
 ## 핵심 문서
 - `ARCHITECTURE.md`
 - `HANDOUT.md`
+- `FILE_SPEC.md`
 - `API_SPEC.md`
 - `DEPLOYMENT.md`
 - `Requirements.md`
 - `TODO.md`
-- `handoff.md`
 
 ## auth-server 문서
 - `auth-server/README.md`
@@ -34,3 +34,4 @@
 - 인증 DB: `workspace_auth`
 - 인증 서버 CORS 및 HTTPS 적용 완료
 - 일반 로그인, 회원가입, Refresh, OAuth 브라우저 검증 완료
+- 메인 페이지 파일: `app/page.tsx`
