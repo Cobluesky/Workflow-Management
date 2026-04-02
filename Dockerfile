@@ -18,7 +18,15 @@ RUN npx prisma generate
 RUN --mount=type=secret,id=APP_ENV_FILE \
     node scripts/run-build-with-env-file.mjs
 
-# 4. 프로덕션 실행 단계
+# 4. 스키마 반영용 단계
+FROM base AS migrator
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY prisma ./prisma
+COPY prisma.config.ts package.json package-lock.json ./
+
+# 5. 프로덕션 실행 단계
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -26,9 +34,6 @@ ENV PORT=3000
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 EXPOSE 3000

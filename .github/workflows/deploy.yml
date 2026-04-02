@@ -152,11 +152,24 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/arm64
+          target: runner
           tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
           secret-files: |
             APP_ENV_FILE=/tmp/timetable-web.env
           cache-from: type=gha,scope=timetable-web
           cache-to: type=gha,mode=max,scope=timetable-web
+
+      - name: Build and Push App Migrator Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/arm64
+          target: migrator
+          tags: ${{ secrets.DOCKER_USERNAME }}/timetable-web-migrator:latest
+          cache-from: type=gha,scope=timetable-web-migrator
+          cache-to: type=gha,mode=max,scope=timetable-web-migrator
 
       - name: Deploy App Server via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -170,10 +183,11 @@ jobs:
             ${{ secrets.APP_ENV_FILE }}
             EOF
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/timetable-web-migrator:latest
             sudo docker run --rm --add-host=host.docker.internal:host-gateway \
               --env-file /opt/workspace/env/timetable-web.env \
-              ${{ secrets.DOCKER_USERNAME }}/timetable-web:latest \
-              sh -lc "./node_modules/.bin/prisma db push --schema prisma/schema.prisma"
+              ${{ secrets.DOCKER_USERNAME }}/timetable-web-migrator:latest \
+              sh -lc "npx prisma db push --schema prisma/schema.prisma"
             sudo docker stop timetable-web || true
             sudo docker rm timetable-web || true
             sudo docker run -d --restart unless-stopped --add-host=host.docker.internal:host-gateway -p 127.0.0.1:3000:3000 --name timetable-web \
