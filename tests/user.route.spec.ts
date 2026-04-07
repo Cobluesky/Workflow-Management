@@ -85,6 +85,36 @@ describe("user route", () => {
     });
   });
 
+  it("GET falls back to the legacy alias when workspace_core is unavailable", async () => {
+    requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-legacy",
+        email: "user@example.com",
+      },
+      localUser: {
+        id: 8,
+        authUserId: "auth-user-legacy",
+        email: "user@example.com",
+        alias: "legacy-only",
+      },
+    });
+    ensureWorkspaceProfileMock.mockRejectedValue(
+      new Error("Missing required database env: WORKSPACE_CORE_DATABASE_URL")
+    );
+
+    const response = await GET(new Request("http://localhost:3000/api/user"));
+    const body = await response.json();
+
+    expect(syncLegacyLocalAliasMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        alias: "legacy-only",
+      },
+    });
+  });
+
   it("PATCH rejects invalid alias", async () => {
     requireAppUserMock.mockResolvedValue({
       authUser: {
@@ -175,6 +205,59 @@ describe("user route", () => {
       success: true,
       data: {
         alias: "new-alias",
+      },
+    });
+  });
+
+  it("PATCH falls back to the legacy alias update when workspace_core is unavailable", async () => {
+    requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-legacy",
+        email: "user@example.com",
+      },
+      localUser: {
+        id: 9,
+        authUserId: "auth-user-legacy",
+        email: "user@example.com",
+        alias: "old-alias",
+      },
+    });
+    prismaMock.workspaceProfile.upsert.mockRejectedValue(
+      new Error("Missing required database env: WORKSPACE_CORE_DATABASE_URL")
+    );
+    syncLegacyLocalAliasMock.mockResolvedValue("fallback-alias");
+
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/user", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newAlias: "fallback-alias" }),
+      })
+    );
+    const body = await response.json();
+
+    expect(syncLegacyLocalAliasMock).toHaveBeenCalledWith(
+      {
+        authUser: {
+          id: "auth-user-legacy",
+          email: "user@example.com",
+        },
+        localUser: {
+          id: 9,
+          authUserId: "auth-user-legacy",
+          email: "user@example.com",
+          alias: "old-alias",
+        },
+      },
+      "fallback-alias"
+    );
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        alias: "fallback-alias",
       },
     });
   });

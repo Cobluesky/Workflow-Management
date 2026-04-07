@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { resolveDomainDatabaseUrl } from "@/lib/prisma/shared";
+import { isDomainStorageUnavailableError, resolveDomainDatabaseUrl } from "@/lib/prisma/shared";
 
 const ORIGINAL_ENV = {
   NODE_ENV: process.env.NODE_ENV,
@@ -55,5 +55,34 @@ describe("resolveDomainDatabaseUrl", () => {
     expect(() => resolveDomainDatabaseUrl("CALENDAR_DATABASE_URL")).toThrow(
       "Missing required database env: CALENDAR_DATABASE_URL"
     );
+  });
+});
+
+describe("isDomainStorageUnavailableError", () => {
+  it("detects a missing split database env error", () => {
+    expect(
+      isDomainStorageUnavailableError(
+        new Error("Missing required database env: WORKSPACE_CORE_DATABASE_URL"),
+        "WORKSPACE_CORE_DATABASE_URL"
+      )
+    ).toBe(true);
+  });
+
+  it("detects Prisma storage availability errors by code", () => {
+    expect(
+      isDomainStorageUnavailableError(
+        { code: "P2021" },
+        "WORKSPACE_CORE_DATABASE_URL"
+      )
+    ).toBe(true);
+  });
+
+  it("does not hide unrelated runtime errors", () => {
+    expect(
+      isDomainStorageUnavailableError(
+        new Error("Unexpected null reference"),
+        "WORKSPACE_CORE_DATABASE_URL"
+      )
+    ).toBe(false);
   });
 });

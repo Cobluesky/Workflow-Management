@@ -18,6 +18,53 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
+const MODULE_STORAGE_KEY_PREFIX = "workspace-enabled-modules";
+
+function normalizeCachedModuleIds(input: unknown) {
+  if (!Array.isArray(input) || input.some((moduleId) => typeof moduleId !== "string")) {
+    return null;
+  }
+
+  const uniqueModuleIds = Array.from(new Set(input));
+  const validModuleIds = new Set(WORKSPACE_MODULES.map((module) => module.id));
+
+  if (uniqueModuleIds.some((moduleId) => !validModuleIds.has(moduleId))) {
+    return null;
+  }
+
+  return uniqueModuleIds;
+}
+
+function getModuleStorageKey(userId: string) {
+  return `${MODULE_STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function readCachedModuleIds(userId: string | null | undefined) {
+  if (typeof window === "undefined" || !userId) {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(getModuleStorageKey(userId));
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return normalizeCachedModuleIds(JSON.parse(rawValue));
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedModuleIds(userId: string | null | undefined, moduleIds: string[]) {
+  if (typeof window === "undefined" || !userId) {
+    return;
+  }
+
+  window.localStorage.setItem(getModuleStorageKey(userId), JSON.stringify(moduleIds));
+}
+
 async function readStoredModuleIds(accessToken: string) {
   const response = await fetch("/api/modules", {
     method: "GET",
@@ -35,10 +82,14 @@ async function readStoredModuleIds(accessToken: string) {
     success: boolean;
     data: {
       enabledModuleIds: string[];
+      persisted?: boolean;
     };
   };
 
-  return payload.data.enabledModuleIds;
+  return {
+    enabledModuleIds: payload.data.enabledModuleIds,
+    persisted: payload.data.persisted !== false,
+  };
 }
 
 async function writeStoredModuleIds(accessToken: string, moduleIds: string[]) {
@@ -56,6 +107,15 @@ async function writeStoredModuleIds(accessToken: string, moduleIds: string[]) {
   if (!response.ok) {
     throw new Error("Failed to save workspace modules.");
   }
+
+  const payload = (await response.json()) as {
+    success: boolean;
+    data: {
+      persisted?: boolean;
+    };
+  };
+
+  return payload.data.persisted !== false;
 }
 
 function SidebarModuleButton({
@@ -114,9 +174,11 @@ export default function AppShell({ title, description, children }: AppShellProps
     let cancelled = false;
 
     async function initializeModules() {
+      const cachedModuleIds = readCachedModuleIds(user?.id);
+
       if (!accessToken) {
         if (!cancelled) {
-          setEnabledModuleIds(DEFAULT_ENABLED_MODULE_IDS);
+          setEnabledModuleIds(cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
           setIsModulesLoading(false);
         }
         return;
@@ -125,14 +187,21 @@ export default function AppShell({ title, description, children }: AppShellProps
       setIsModulesLoading(true);
 
       try {
-        const storedModuleIds = await readStoredModuleIds(accessToken);
+        const { enabledModuleIds: storedModuleIds, persisted } = await readStoredModuleIds(accessToken);
+        const nextModuleIds = persisted
+          ? storedModuleIds
+          : (cachedModuleIds ?? (storedModuleIds.length > 0 ? storedModuleIds : DEFAULT_ENABLED_MODULE_IDS));
 
         if (!cancelled) {
-          setEnabledModuleIds(storedModuleIds.length > 0 ? storedModuleIds : DEFAULT_ENABLED_MODULE_IDS);
+          setEnabledModuleIds(nextModuleIds);
+        }
+
+        if (persisted) {
+          writeCachedModuleIds(user?.id, storedModuleIds);
         }
       } catch {
         if (!cancelled) {
-          setEnabledModuleIds(DEFAULT_ENABLED_MODULE_IDS);
+          setEnabledModuleIds(cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
         }
       } finally {
         if (!cancelled) {
@@ -146,7 +215,7 @@ export default function AppShell({ title, description, children }: AppShellProps
     return () => {
       cancelled = true;
     };
-  }, [accessToken, isAuthLoading]);
+  }, [accessToken, isAuthLoading, user?.id]);
 
   const enabledModules = useMemo(
     () => WORKSPACE_MODULES.filter((module) => enabledModuleIds.includes(module.id)),
@@ -159,26 +228,26 @@ export default function AppShell({ title, description, children }: AppShellProps
   );
 
   async function persistModuleIds(nextIds: string[]) {
+    writeCachedModuleIds(user?.id, nextIds);
+
     if (!accessToken) {
-      return;
+      return false;
     }
 
-    await writeStoredModuleIds(accessToken, nextIds);
+    try {
+      return await writeStoredModuleIds(accessToken, nextIds);
+    } catch {
+      return false;
+    }
   }
 
   async function handleRemoveModule(moduleId: string) {
-    const previousIds = enabledModuleIds;
-    const nextIds = previousIds.filter((id) => id !== moduleId);
+    const nextIds = enabledModuleIds.filter((id) => id !== moduleId);
     const currentModule = getModuleByHref(pathname);
 
     setEnabledModuleIds(nextIds);
 
-    try {
-      await persistModuleIds(nextIds);
-    } catch {
-      setEnabledModuleIds(previousIds);
-      return;
-    }
+    await persistModuleIds(nextIds);
 
     if (currentModule?.id === moduleId) {
       const nextModule = WORKSPACE_MODULES.find((module) => nextIds.includes(module.id));
@@ -192,17 +261,10 @@ export default function AppShell({ title, description, children }: AppShellProps
   }
 
   async function handleAddModule(moduleId: string) {
-    const previousIds = enabledModuleIds;
-    const nextIds = [...previousIds, moduleId];
+    const nextIds = [...enabledModuleIds, moduleId];
 
     setEnabledModuleIds(nextIds);
-
-    try {
-      await persistModuleIds(nextIds);
-    } catch {
-      setEnabledModuleIds(previousIds);
-      return;
-    }
+    await persistModuleIds(nextIds);
 
     setIsAddModalOpen(false);
   }

@@ -61,6 +61,7 @@ describe("modules route", () => {
       success: true,
       data: {
         enabledModuleIds: ["timetable", "tasks"],
+        persisted: true,
       },
     });
   });
@@ -103,6 +104,7 @@ describe("modules route", () => {
     });
     expect(response.status).toBe(200);
     expect(body.data.enabledModuleIds).toEqual(["timetable", "mypage"]);
+    expect(body.data.persisted).toBe(true);
   });
 
   it("GET preserves an intentionally empty module selection", async () => {
@@ -128,6 +130,36 @@ describe("modules route", () => {
     expect(prismaMock.workspaceModulePreference.createMany).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(body.data.enabledModuleIds).toEqual([]);
+    expect(body.data.persisted).toBe(true);
+  });
+
+  it("GET falls back to default modules when workspace_core is unavailable", async () => {
+    requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-fallback",
+        email: "user@example.com",
+      },
+      localUser: {
+        id: 12,
+        email: "user@example.com",
+        alias: null,
+      },
+    });
+    prismaMock.workspaceModuleState.findUnique.mockRejectedValue(
+      new Error("Missing required database env: WORKSPACE_CORE_DATABASE_URL")
+    );
+
+    const response = await GET(new Request("http://localhost:3000/api/modules"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        enabledModuleIds: ["timetable", "mypage"],
+        persisted: false,
+      },
+    });
   });
 
   it("PATCH rejects invalid module ids", async () => {
@@ -208,6 +240,7 @@ describe("modules route", () => {
     });
     expect(response.status).toBe(200);
     expect(body.data.enabledModuleIds).toEqual(["mypage", "tasks", "timetable"]);
+    expect(body.data.persisted).toBe(true);
   });
 
   it("PATCH allows storing an empty module selection", async () => {
@@ -252,6 +285,46 @@ describe("modules route", () => {
     });
     expect(response.status).toBe(200);
     expect(body.data.enabledModuleIds).toEqual([]);
+    expect(body.data.persisted).toBe(true);
+  });
+
+  it("PATCH returns a local-only success when workspace_core is unavailable", async () => {
+    requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-fallback",
+        email: "user@example.com",
+      },
+      localUser: {
+        id: 31,
+        email: "user@example.com",
+        alias: null,
+      },
+    });
+    prismaMock.$transaction.mockRejectedValue(
+      new Error("Missing required database env: WORKSPACE_CORE_DATABASE_URL")
+    );
+
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/modules", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          enabledModuleIds: ["timetable", "tasks"],
+        }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        enabledModuleIds: ["timetable", "tasks"],
+        persisted: false,
+      },
+    });
   });
 
   it("passes through auth errors", async () => {

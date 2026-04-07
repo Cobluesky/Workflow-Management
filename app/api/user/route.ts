@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { corePrisma } from "@/lib/prisma/core";
 import { ensureWorkspaceProfile, requireAppUser, syncLegacyLocalAlias } from "@/lib/server-auth";
+import { isDomainStorageUnavailableError } from "@/lib/prisma/shared";
 
 export async function GET(req: Request) {
   try {
@@ -10,18 +11,34 @@ export async function GET(req: Request) {
       return appUser;
     }
 
-    const workspaceProfile = await ensureWorkspaceProfile(appUser);
-    await syncLegacyLocalAlias(appUser, workspaceProfile.alias);
+    try {
+      const workspaceProfile = await ensureWorkspaceProfile(appUser);
+      await syncLegacyLocalAlias(appUser, workspaceProfile.alias);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          alias: workspaceProfile.alias,
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            alias: workspaceProfile.alias,
+          },
         },
-      },
-      { status: 200 }
-    );
+        { status: 200 }
+      );
+    } catch (error) {
+      if (isDomainStorageUnavailableError(error, "WORKSPACE_CORE_DATABASE_URL")) {
+        return NextResponse.json(
+          {
+            success: true,
+            data: {
+              alias: appUser.localUser.alias,
+            },
+          },
+          { status: 200 }
+        );
+      }
+
+      throw error;
+    }
   } catch (error) {
     return NextResponse.json(
       {
@@ -53,26 +70,38 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const updatedUser = await corePrisma.workspaceProfile.upsert({
-      where: { authUserId: appUser.authUser.id },
-      update: {
-        email: appUser.authUser.email,
-        alias: newAlias,
-      },
-      create: {
-        authUserId: appUser.authUser.id,
-        email: appUser.authUser.email,
-        alias: newAlias,
-      },
-      select: { alias: true },
-    });
-    await syncLegacyLocalAlias(appUser, updatedUser.alias);
+    let alias: string | null;
+
+    try {
+      const updatedUser = await corePrisma.workspaceProfile.upsert({
+        where: { authUserId: appUser.authUser.id },
+        update: {
+          email: appUser.authUser.email,
+          alias: newAlias,
+        },
+        create: {
+          authUserId: appUser.authUser.id,
+          email: appUser.authUser.email,
+          alias: newAlias,
+        },
+        select: { alias: true },
+      });
+
+      alias = updatedUser.alias;
+      await syncLegacyLocalAlias(appUser, alias);
+    } catch (error) {
+      if (!isDomainStorageUnavailableError(error, "WORKSPACE_CORE_DATABASE_URL")) {
+        throw error;
+      }
+
+      alias = await syncLegacyLocalAlias(appUser, newAlias);
+    }
 
     return NextResponse.json(
       {
         success: true,
         data: {
-          alias: updatedUser.alias,
+          alias,
         },
       },
       { status: 200 }

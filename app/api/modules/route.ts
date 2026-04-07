@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { corePrisma } from "@/lib/prisma/core";
 import { requireAppUser } from "@/lib/server-auth";
 import { DEFAULT_ENABLED_MODULE_IDS, WORKSPACE_MODULES } from "@/app/moduleRegistry";
+import { isDomainStorageUnavailableError } from "@/lib/prisma/shared";
 
 type ModulesResponseData = {
   enabledModuleIds: string[];
+  persisted?: boolean;
 };
 
 const VALID_MODULE_IDS = new Set(WORKSPACE_MODULES.map((module) => module.id));
@@ -98,11 +100,19 @@ export async function GET(req: Request) {
       return appUser;
     }
 
-    const enabledModuleIds = await readOrInitializeModules(appUser.authUser.id);
-    return successResponse({ enabledModuleIds });
+    try {
+      const enabledModuleIds = await readOrInitializeModules(appUser.authUser.id);
+      return successResponse({ enabledModuleIds, persisted: true });
+    } catch (error) {
+      if (isDomainStorageUnavailableError(error, "WORKSPACE_CORE_DATABASE_URL")) {
+        return successResponse({ enabledModuleIds: DEFAULT_ENABLED_MODULE_IDS, persisted: false });
+      }
+
+      throw error;
+    }
   } catch (error) {
     console.error("Failed to load workspace modules", error);
-    return errorResponse("INTERNAL_SERVER_ERROR", "모듈 구성을 불러오는 중 오류가 발생했습니다.", 500);
+    return errorResponse("INTERNAL_SERVER_ERROR", "Failed to load workspace modules.", 500);
   }
 }
 
@@ -118,39 +128,47 @@ export async function PATCH(req: Request) {
     const enabledModuleIds = normalizeModuleIds(body?.enabledModuleIds);
 
     if (!enabledModuleIds) {
-      return errorResponse("INVALID_MODULE_CONFIG", "모듈 구성 형식이 올바르지 않습니다.", 400);
+      return errorResponse("INVALID_MODULE_CONFIG", "Invalid workspace module configuration.", 400);
     }
 
-    await corePrisma.$transaction(async (tx) => {
-      await tx.workspaceModulePreference.deleteMany({
-        where: { authUserId: appUser.authUser.id },
+    try {
+      await corePrisma.$transaction(async (tx) => {
+        await tx.workspaceModulePreference.deleteMany({
+          where: { authUserId: appUser.authUser.id },
+        });
+
+        if (enabledModuleIds.length > 0) {
+          await tx.workspaceModulePreference.createMany({
+            data: enabledModuleIds.map((moduleId, index) => ({
+              authUserId: appUser.authUser.id,
+              moduleId,
+              position: index,
+            })),
+          });
+        }
+
+        await tx.workspaceModuleState.upsert({
+          where: { authUserId: appUser.authUser.id },
+          update: {
+            workspaceModulesInitialized: true,
+          },
+          create: {
+            authUserId: appUser.authUser.id,
+            workspaceModulesInitialized: true,
+          },
+        });
       });
 
-      if (enabledModuleIds.length > 0) {
-        await tx.workspaceModulePreference.createMany({
-          data: enabledModuleIds.map((moduleId, index) => ({
-            authUserId: appUser.authUser.id,
-            moduleId,
-            position: index,
-          })),
-        });
+      return successResponse({ enabledModuleIds, persisted: true });
+    } catch (error) {
+      if (isDomainStorageUnavailableError(error, "WORKSPACE_CORE_DATABASE_URL")) {
+        return successResponse({ enabledModuleIds, persisted: false });
       }
 
-      await tx.workspaceModuleState.upsert({
-        where: { authUserId: appUser.authUser.id },
-        update: {
-          workspaceModulesInitialized: true,
-        },
-        create: {
-          authUserId: appUser.authUser.id,
-          workspaceModulesInitialized: true,
-        },
-      });
-    });
-
-    return successResponse({ enabledModuleIds });
+      throw error;
+    }
   } catch (error) {
     console.error("Failed to update workspace modules", error);
-    return errorResponse("INTERNAL_SERVER_ERROR", "모듈 구성을 저장하는 중 오류가 발생했습니다.", 500);
+    return errorResponse("INTERNAL_SERVER_ERROR", "Failed to update workspace modules.", 500);
   }
 }
