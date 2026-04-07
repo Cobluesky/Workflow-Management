@@ -36,6 +36,24 @@ describe("auth routes", () => {
     });
   });
 
+  it("GET /metrics returns prometheus metrics", async () => {
+    const response = await request(app).get("/metrics");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/plain");
+    expect(response.text).toContain("workspace_auth_info");
+  });
+
+  it("GET /metrics is excluded from auth HTTP traffic counters", async () => {
+    await request(app).get("/health");
+
+    const response = await request(app).get("/metrics");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('workspace_auth_http_requests_total{method="GET",route="/health",status_code="200"}');
+    expect(response.text).not.toContain('route="/metrics"');
+  });
+
   it("POST /api/v1/auth/register returns 201", async () => {
     authServiceMock.register.mockResolvedValue({
       userId: "user-1",
