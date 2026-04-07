@@ -176,15 +176,47 @@ async function resolveLocalUser(
 export async function ensureWorkspaceProfile(
   appUser: Pick<RequireAppUserResult, "authUser" | "localUser">
 ) {
-  return corePrisma.workspaceProfile.upsert({
+  const existingProfile = await corePrisma.workspaceProfile.findUnique({
     where: { authUserId: appUser.authUser.id },
-    update: {
-      email: appUser.authUser.email,
+    select: {
+      authUserId: true,
+      email: true,
+      alias: true,
     },
-    create: {
-      authUserId: appUser.authUser.id,
+  });
+
+  if (!existingProfile) {
+    return corePrisma.workspaceProfile.create({
+      data: {
+        authUserId: appUser.authUser.id,
+        email: appUser.authUser.email,
+        alias: appUser.localUser.alias,
+      },
+      select: {
+        authUserId: true,
+        email: true,
+        alias: true,
+      },
+    });
+  }
+
+  const reconciledAlias =
+    appUser.localUser.alias !== null && appUser.localUser.alias !== existingProfile.alias
+      ? appUser.localUser.alias
+      : existingProfile.alias;
+
+  if (
+    existingProfile.email === appUser.authUser.email &&
+    existingProfile.alias === reconciledAlias
+  ) {
+    return existingProfile;
+  }
+
+  return corePrisma.workspaceProfile.update({
+    where: { authUserId: appUser.authUser.id },
+    data: {
       email: appUser.authUser.email,
-      alias: appUser.localUser.alias,
+      alias: reconciledAlias,
     },
     select: {
       authUserId: true,

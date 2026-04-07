@@ -19,6 +19,7 @@ type AppShellProps = {
 };
 
 const MODULE_STORAGE_KEY_PREFIX = "workspace-enabled-modules";
+const PENDING_MODULE_STORAGE_KEY_PREFIX = "workspace-pending-enabled-modules";
 
 function normalizeCachedModuleIds(input: unknown) {
   if (!Array.isArray(input) || input.some((moduleId) => typeof moduleId !== "string")) {
@@ -37,6 +38,10 @@ function normalizeCachedModuleIds(input: unknown) {
 
 function getModuleStorageKey(userId: string) {
   return `${MODULE_STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function getPendingModuleStorageKey(userId: string) {
+  return `${PENDING_MODULE_STORAGE_KEY_PREFIX}:${userId}`;
 }
 
 function readCachedModuleIds(userId: string | null | undefined) {
@@ -63,6 +68,40 @@ function writeCachedModuleIds(userId: string | null | undefined, moduleIds: stri
   }
 
   window.localStorage.setItem(getModuleStorageKey(userId), JSON.stringify(moduleIds));
+}
+
+function readPendingModuleIds(userId: string | null | undefined) {
+  if (typeof window === "undefined" || !userId) {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(getPendingModuleStorageKey(userId));
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return normalizeCachedModuleIds(JSON.parse(rawValue));
+  } catch {
+    return null;
+  }
+}
+
+function writePendingModuleIds(userId: string | null | undefined, moduleIds: string[]) {
+  if (typeof window === "undefined" || !userId) {
+    return;
+  }
+
+  window.localStorage.setItem(getPendingModuleStorageKey(userId), JSON.stringify(moduleIds));
+}
+
+function clearPendingModuleIds(userId: string | null | undefined) {
+  if (typeof window === "undefined" || !userId) {
+    return;
+  }
+
+  window.localStorage.removeItem(getPendingModuleStorageKey(userId));
 }
 
 async function readStoredModuleIds(accessToken: string) {
@@ -175,10 +214,11 @@ export default function AppShell({ title, description, children }: AppShellProps
 
     async function initializeModules() {
       const cachedModuleIds = readCachedModuleIds(user?.id);
+      const pendingModuleIds = readPendingModuleIds(user?.id);
 
       if (!accessToken) {
         if (!cancelled) {
-          setEnabledModuleIds(cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
+          setEnabledModuleIds(pendingModuleIds ?? cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
           setIsModulesLoading(false);
         }
         return;
@@ -187,6 +227,29 @@ export default function AppShell({ title, description, children }: AppShellProps
       setIsModulesLoading(true);
 
       try {
+        if (pendingModuleIds !== null) {
+          if (!cancelled) {
+            setEnabledModuleIds(pendingModuleIds);
+          }
+
+          const replayPersisted = await writeStoredModuleIds(accessToken, pendingModuleIds).catch(
+            () => false
+          );
+
+          if (replayPersisted) {
+            clearPendingModuleIds(user?.id);
+            writeCachedModuleIds(user?.id, pendingModuleIds);
+          }
+
+          if (!cancelled) {
+            setIsModulesLoading(false);
+          }
+
+          if (!replayPersisted) {
+            return;
+          }
+        }
+
         const { enabledModuleIds: storedModuleIds, persisted } = await readStoredModuleIds(accessToken);
         const nextModuleIds = persisted
           ? storedModuleIds
@@ -197,11 +260,12 @@ export default function AppShell({ title, description, children }: AppShellProps
         }
 
         if (persisted) {
+          clearPendingModuleIds(user?.id);
           writeCachedModuleIds(user?.id, storedModuleIds);
         }
       } catch {
         if (!cancelled) {
-          setEnabledModuleIds(cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
+          setEnabledModuleIds(pendingModuleIds ?? cachedModuleIds ?? DEFAULT_ENABLED_MODULE_IDS);
         }
       } finally {
         if (!cancelled) {
@@ -231,12 +295,22 @@ export default function AppShell({ title, description, children }: AppShellProps
     writeCachedModuleIds(user?.id, nextIds);
 
     if (!accessToken) {
+      writePendingModuleIds(user?.id, nextIds);
       return false;
     }
 
     try {
-      return await writeStoredModuleIds(accessToken, nextIds);
+      const persisted = await writeStoredModuleIds(accessToken, nextIds);
+
+      if (persisted) {
+        clearPendingModuleIds(user?.id);
+      } else {
+        writePendingModuleIds(user?.id, nextIds);
+      }
+
+      return persisted;
     } catch {
+      writePendingModuleIds(user?.id, nextIds);
       return false;
     }
   }

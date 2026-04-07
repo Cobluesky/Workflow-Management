@@ -76,6 +76,7 @@ async function readOrInitializeModules(authUserId: string) {
         moduleId,
         position: index,
       })),
+      skipDuplicates: true,
     });
     await tx.workspaceModuleState.upsert({
       where: { authUserId },

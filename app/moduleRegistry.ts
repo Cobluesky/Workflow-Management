@@ -26,8 +26,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     description: "계정 정보와 별명을 관리하는 사용자 설정 모듈",
     availability: "live",
     defaultEnabled: true,
-    currentDatabase: "timetable_db",
-    plannedDatabase: "profile_db"
+    currentDatabase: "workspace_core"
   },
   {
     id: "calendar",
@@ -36,8 +35,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     description: "월간 일정과 개인 이벤트를 관리하는 모듈",
     availability: "live",
     defaultEnabled: false,
-    currentDatabase: "timetable_db",
-    plannedDatabase: "calendar_db"
+    currentDatabase: "calendar_db"
   },
   {
     id: "tasks",
@@ -46,8 +44,7 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     description: "개인 작업과 마감 일정을 관리하는 모듈",
     availability: "live",
     defaultEnabled: false,
-    currentDatabase: "timetable_db",
-    plannedDatabase: "tasks_db"
+    currentDatabase: "tasks_db"
   },
   {
     id: "projects",

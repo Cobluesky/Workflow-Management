@@ -91,6 +91,7 @@ describe("modules route", () => {
         { authUserId: "auth-user-3", moduleId: "timetable", position: 0 },
         { authUserId: "auth-user-3", moduleId: "mypage", position: 1 },
       ],
+      skipDuplicates: true,
     });
     expect(prismaMock.workspaceModuleState.upsert).toHaveBeenCalledWith({
       where: { authUserId: "auth-user-3" },

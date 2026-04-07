@@ -1,492 +1,118 @@
-# API 명세서
+﻿# API 스펙
 
-## 1. 개요
-- 이 문서는 중앙 인증 서버 `auth.workspace.p-e.kr`의 현재 구현 기준 API 계약을 정리한다.
-- Base URL은 `https://auth.workspace.p-e.kr/api/v1` 이다.
-- 모든 응답은 기본적으로 `application/json` 형식을 사용한다.
+## 공통 규칙
+- 보호 API는 `Authorization: Bearer <accessToken>`을 사용한다.
+- 브라우저 클라이언트는 refresh cookie를 위해 `credentials: include`를 사용한다.
+- auth 관련 브라우저 요청은 CORS 허용 origin 안에서만 동작한다.
 
-## 2. 공통 규칙
-### 2.1 공통 헤더
-- 요청 바디가 있는 경우 `Content-Type: application/json`
-- 보호 API는 `Authorization: Bearer <accessToken>` 사용
-- 브라우저 클라이언트는 `credentials: include`로 Refresh Token 쿠키를 함께 전송한다
+## Auth Server API
+Base URL: `https://auth.workspace.p-e.kr/api/v1`
 
-### 2.2 공통 응답 형식
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
+### `POST /auth/register`
+- 회원가입
+- 입력 검증
+  - `email`: 유효한 이메일 형식
+  - `password`: 최소 8자
+  - `name`: 1자 이상 50자 이하
 
-### 2.3 공통 에러 형식
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "에러 메시지"
-  }
-}
-```
+### `POST /auth/login`
+- 일반 로그인
+- 성공 시 access token 반환
+- refresh token cookie 설정
 
-### 2.4 Refresh Token 쿠키
-- 쿠키 이름: `refreshToken`
-- 권장 속성
-  - `HttpOnly`
-  - `Secure`
-  - 운영 환경에서 `SameSite=None`
-  - `Domain=.workspace.p-e.kr`
-  - `Path=/`
+### `POST /auth/refresh`
+- refresh cookie 기준으로 access token 재발급
+- 로그아웃 상태에서는 `401`이 정상일 수 있다.
 
-### 2.5 CORS
-- 허용 Origin은 `CLIENT_ORIGINS` 환경 변수로 관리한다
-- 현재 운영 허용 Origin
-  - `https://app.workspace.p-e.kr`
-  - `https://project1.workspace.p-e.kr`
-- `Access-Control-Allow-Credentials: true`를 사용한다
-- 브라우저 환경에서는 `/auth/refresh`, `/auth/login`, `/auth/register`, `/auth/logout` 호출 시 `credentials: include`가 필요하다
+### `GET /auth/verify`
+- access token 검증
+- 앱 서버의 보호 API가 이 엔드포인트를 사용한다.
 
-## 3. 인증 API
+### `POST /auth/logout`
+- refresh token 무효화
+- refresh cookie 제거
 
-### 3.1 회원가입
-`POST /auth/register`
+### `GET /auth/provider/:provider`
+- OAuth 시작
+- `google`, `github`, `kakao`
 
-검증 규칙:
-- `email`: 유효한 이메일 형식
-- `password`: 최소 8자
-- `name`: 1자 이상 50자 이하
+### `GET /auth/callback/:provider`
+- OAuth callback 처리
+- 현재 구현은 callback 이후 `accessToken` query redirect를 사용한다.
 
-요청:
-```json
-{
-  "email": "user@example.com",
-  "password": "plain-password",
-  "name": "홍길동"
-}
-```
+## App API
+Base URL: `https://app.workspace.p-e.kr`
 
-성공 응답:
-`201 Created`
+### `GET /api/user`
+- 현재 사용자 프로필 조회
+- 주 저장소: `workspace_core.WorkspaceProfile`
+- `workspace_core` 장애 시 legacy alias fallback 가능
 
+응답 예시:
 ```json
 {
   "success": true,
   "data": {
-    "userId": "clx123abc",
-    "message": "User created successfully"
+    "alias": "gimlet"
   }
 }
 ```
 
-실패 예시:
-- `400 Bad Request`: 요청 형식 오류
-- `409 Conflict`: 이미 가입된 이메일
+### `PATCH /api/user`
+- 현재 사용자 alias 수정
+- 주 저장소: `workspace_core.WorkspaceProfile`
+- core 미준비 시 legacy alias 경로로 fallback
 
-검증 실패 응답 예시:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "요청 데이터가 올바르지 않습니다."
-  },
-  "details": {
-    "formErrors": [],
-    "fieldErrors": {
-      "password": [
-        "Too small: expected string to have >=8 characters"
-      ]
-    }
-  }
-}
-```
+### `GET /api/modules`
+- 활성 모듈 목록 조회
+- 저장소: `workspace_core.WorkspaceModulePreference`, `WorkspaceModuleState`
+- 기본 모듈: `timetable`, `mypage`
+- core 미준비 시 `persisted: false`와 함께 fallback 응답 반환
 
-### 3.2 로그인
-`POST /auth/login`
-
-요청:
-```json
-{
-  "email": "user@example.com",
-  "password": "plain-password"
-}
-```
-
-성공 응답:
-`200 OK`
-
-헤더:
-```http
-Set-Cookie: refreshToken=...; HttpOnly; Secure; Domain=.workspace.p-e.kr; Path=/
-```
-
-바디:
+응답 예시:
 ```json
 {
   "success": true,
   "data": {
-    "accessToken": "jwt-access-token",
-    "user": {
-      "id": "clx123abc",
-      "email": "user@example.com",
-      "name": "홍길동",
-      "role": "USER"
-    }
+    "enabledModuleIds": ["timetable", "mypage"],
+    "persisted": true
   }
 }
 ```
 
-실패 예시:
-- `400 Bad Request`: 요청 형식 오류
-- `401 Unauthorized`: 이메일 또는 비밀번호 불일치
-
-참고:
-- 운영 브라우저 검증 완료
-- 성공 시 Refresh Token 쿠키가 함께 설정되어 이후 `/auth/refresh`가 가능해진다
-
-### 3.3 OAuth 로그인 시작
-`GET /auth/provider/:provider`
-
-Path Parameter:
-- `provider`: `google` | `kakao` | `github`
-
-Query Parameter:
-- `redirectUri`: 로그인 완료 후 돌아갈 클라이언트 URL
-
-현재 운영 클라이언트 복귀 경로 예시:
-- `https://app.workspace.p-e.kr/login/callback`
-
-성공 응답:
-`302 Found`
-
-- 각 OAuth 공급자 로그인 페이지로 리다이렉트
-- `state`에는 provider와 redirectUri가 서명되어 포함됨
-- 현재 운영에서 Google, GitHub, Kakao 리다이렉트 검증 완료
-
-### 3.4 OAuth callback
-`GET /auth/callback/:provider`
-
-Path Parameter:
-- `provider`: `google` | `kakao` | `github`
-
-Query Parameter:
-- `code`: OAuth Authorization Code
-- `state`: 서명된 상태값
-
-성공 응답:
-`302 Found`
-
-- Refresh Token 쿠키 설정
-- 클라이언트 `redirectUri`로 리다이렉트
-- 현재 구현에서는 `accessToken`을 query string으로 전달
-- 예: `https://app.workspace.p-e.kr/login/callback?accessToken=...`
-
-실패 예시:
-- `400 Bad Request`: code/state 누락 또는 state 검증 실패
-- `404 Not Found`: 지원하지 않는 provider
-- `500 Internal Server Error`: provider 설정 누락
-- `502 Bad Gateway`: provider 토큰 교환 또는 프로필 조회 실패
-
-### 3.5 토큰 재발급
-`POST /auth/refresh`
-
-요청:
-- 바디 없음
-- `refreshToken` 쿠키 필요
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "new-jwt-access-token"
-  }
-}
-```
-
-실패 예시:
-- `401 Unauthorized`: Refresh Token 없음
-- `403 Forbidden`: Refresh Token 무효 또는 폐기됨
-
-참고:
-- 로그인 전 또는 로그아웃 후에는 `401 Unauthorized`가 정상일 수 있다
-- 브라우저에서는 CORS preflight와 함께 호출되며, 운영 환경에서 preflight 응답을 검증 완료했다
-
-### 3.6 토큰 검증
-`GET /auth/verify`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-```
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "isValid": true,
-    "user": {
-      "id": "clx123abc",
-      "email": "user@example.com",
-      "name": "홍길동",
-      "role": "USER"
-    }
-  }
-}
-```
-
-실패 예시:
-- `401 Unauthorized`: 토큰 없음 또는 형식 오류
-- `403 Forbidden`: 만료, 서명 불일치, 비활성 사용자
-
-### 3.7 로그아웃
-`POST /auth/logout`
-
-성공 응답:
-`200 OK`
-
-헤더:
-```http
-Set-Cookie: refreshToken=; Max-Age=0; Domain=.workspace.p-e.kr; Path=/
-```
-
-바디:
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Logged out successfully"
-  }
-}
-```
-
-## 4. 운영 API
-### 4.1 헬스체크
-`GET /health`
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "status": "ok"
-  }
-}
-```
-
-## 5. 루트 앱 워크스페이스 API
-### 5.1 활성 모듈 조회
-`GET /api/modules`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-```
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "enabledModuleIds": ["timetable", "mypage"]
-  }
-}
-```
-
-참고:
-- 인증된 앱 사용자 기준으로 활성 모듈 목록을 반환한다
-- 저장된 구성이 없으면 기본 모듈(`timetable`, `mypage`)을 초기화해서 반환한다
-
-### 5.2 활성 모듈 저장
-`PATCH /api/modules`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-```
-
-요청 바디:
-```json
-{
-  "enabledModuleIds": ["mypage", "tasks", "timetable"]
-}
-```
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "enabledModuleIds": ["mypage", "tasks", "timetable"]
-  }
-}
-```
-
-실패 예시:
-- `400 Bad Request`: 지원하지 않는 모듈 ID 포함
-- `401 Unauthorized`: Access Token 누락
-
-참고:
-- 모듈 구성은 `timetable_db.WorkspaceModulePreference`에 저장한다
-- 현재 저장소와 계획 저장소는 UI 메타데이터로 별도 노출한다
-
-### 5.3 캘린더 이벤트 조회
-`GET /api/calendar?month=YYYY-MM`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-```
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "events": [
-      {
-        "id": 1,
-        "title": "팀 미팅",
-        "description": null,
-        "location": "회의실",
-        "startsAt": "2026-04-10T01:00:00.000Z",
-        "endsAt": "2026-04-10T02:00:00.000Z",
-        "colorToken": "indigo",
-        "isAllDay": false
-      }
-    ]
-  }
-}
-```
-
-참고:
-- 현재 캘린더 모듈은 앱 DB(`timetable_db`)를 사용한다
-- 월 경계의 로컬 일정 누락을 막기 위해 서버는 UTC 조회 범위를 완충해서 조회한다
-
-### 5.4 캘린더 이벤트 저장
-`POST /api/calendar`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-```
-
-요청 바디:
-```json
-{
-  "title": "팀 미팅",
-  "description": "발표 자료 점검",
-  "location": "회의실",
-  "startsAt": "2026-04-10T01:00:00.000Z",
-  "endsAt": "2026-04-10T02:00:00.000Z",
-  "colorToken": "indigo",
-  "isAllDay": false
-}
-```
-
-추가 작업:
-- `PATCH /api/calendar`
-- `DELETE /api/calendar`
-
-참고:
-- 모든 변경은 인증된 로컬 앱 사용자 기준으로만 수행한다
-- 클라이언트가 보낸 별도 `userId`는 사용하지 않는다
-
-### 5.5 할 일 목록 조회
-`GET /api/tasks`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-```
-
-성공 응답:
-`200 OK`
-
-```json
-{
-  "success": true,
-  "data": {
-    "tasks": [
-      {
-        "id": 1,
-        "title": "보고서 초안 정리",
-        "description": "월간 회의 전에 초안 정리",
-        "dueDate": "2026-04-07T14:59:00.000Z",
-        "status": "todo",
-        "priority": "high",
-        "createdAt": "2026-04-02T01:00:00.000Z",
-        "updatedAt": "2026-04-02T03:00:00.000Z"
-      }
-    ]
-  }
-}
-```
-
-### 5.6 할 일 저장
-`POST /api/tasks`
-
-요청 헤더:
-```http
-Authorization: Bearer <accessToken>
-Content-Type: application/json
-```
-
-요청 바디:
-```json
-{
-  "title": "보고서 초안 정리",
-  "description": "월간 회의 전에 초안 정리",
-  "dueDate": "2026-04-07T14:59:00.000Z",
-  "status": "todo",
-  "priority": "high"
-}
-```
-
-추가 작업:
-- `PATCH /api/tasks`
-- `DELETE /api/tasks`
-
-참고:
-- 현재 할 일 모듈은 앱 DB(`timetable_db`)를 사용한다
-- 장기적으로 `tasks_db`로 분리할 계획이다
-
-## 6. JWT Claim
-```json
-{
-  "sub": "clx123abc",
-  "email": "user@example.com",
-  "name": "홍길동",
-  "role": "USER",
-  "iss": "https://auth.workspace.p-e.kr",
-  "aud": "workspace-clients"
-}
-```
-
-## 7. 현재 구현 메모
-- runtime Prisma client는 `core / timetable / calendar / tasks` 경계로 분리되기 시작했고, migration 기준은 당분간 통합 [prisma/schema.prisma](/C:/workflow-management/prisma/schema.prisma)를 유지한다
-- 로컬 인증은 구현 완료
-- OAuth는 Google/Kakao/GitHub 공통 흐름 코드가 추가된 상태
-- 운영 환경에서 OAuth 브라우저 검증 완료
-- 현재 OAuth callback은 Access Token을 query string으로 전달한다
-- 장기적으로는 전용 callback 페이지 또는 one-time code 방식으로 개선 가능
-- 프론트 회원가입 폼은 현재 서버 검증 규칙에 맞춰 사전 validation을 수행한다
-- 운영 CORS 이슈를 반영해 env 문자열과 Origin 비교는 정규화된 값으로 처리한다
-- 워크스페이스 사이드바의 활성 모듈 목록은 서버 저장 방식으로 전환됐다
-- `calendar`와 `tasks` API는 현재 앱 DB를 사용하지만, API 계약은 유지한 채 모듈별 DB로 분리할 계획이다
+### `PATCH /api/modules`
+- 활성 모듈 목록 저장
+- core 미준비 시 `persisted: false`를 반환하고, 클라이언트는 로컬 캐시를 유지한 뒤 복구 후 재전송한다.
+
+### `GET /api/timetable`
+- 시간표 조회
+- 저장소: `timetable_db`
+
+### `POST /api/timetable`
+- 시간표 저장
+- 저장소: `timetable_db`
+
+### `GET /api/calendar?month=YYYY-MM`
+- 월 단위 일정 조회
+- 저장소: `calendar_db`
+- 월 경계 일정 누락을 막기 위해 조회 범위를 넓혀서 읽는다.
+
+### `POST /api/calendar`
+### `PATCH /api/calendar`
+### `DELETE /api/calendar`
+- 캘린더 일정 CRUD
+- 저장소: `calendar_db`
+- 소유 키: `authUserId`
+
+### `GET /api/tasks`
+### `POST /api/tasks`
+### `PATCH /api/tasks`
+### `DELETE /api/tasks`
+- 할 일 CRUD
+- 저장소: `tasks_db`
+- 소유 키: `authUserId`
+
+## Split 런타임 메모
+- `workspace_core`, `calendar_db`, `tasks_db`는 운영에서 개별 DB URL이 필수다.
+- 운영에서 split DB URL이 빠지면 deploy가 실패해야 한다.
+- 로컬 개발에서만 `DATABASE_URL` fallback을 허용한다.

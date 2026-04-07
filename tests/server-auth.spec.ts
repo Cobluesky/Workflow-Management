@@ -12,7 +12,9 @@ const timetablePrismaMock = vi.hoisted(() => ({
 
 const corePrismaMock = vi.hoisted(() => ({
   workspaceProfile: {
-    upsert: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -43,10 +45,16 @@ describe("server auth helpers", () => {
     timetablePrismaMock.$transaction.mockImplementation(
       async (callback: (tx: typeof timetablePrismaMock) => unknown) => callback(timetablePrismaMock)
     );
-    corePrismaMock.workspaceProfile.upsert.mockImplementation(async ({ create, update, where }: any) => ({
+    corePrismaMock.workspaceProfile.findUnique.mockResolvedValue(null);
+    corePrismaMock.workspaceProfile.create.mockImplementation(async ({ data }: any) => ({
+      authUserId: data.authUserId,
+      email: data.email,
+      alias: data.alias ?? null,
+    }));
+    corePrismaMock.workspaceProfile.update.mockImplementation(async ({ where, data }: any) => ({
       authUserId: where.authUserId,
-      email: update?.email ?? create.email,
-      alias: create.alias ?? null,
+      email: data.email,
+      alias: data.alias ?? null,
     }));
   });
 
@@ -95,7 +103,7 @@ describe("server auth helpers", () => {
     expect(result).not.toBeInstanceOf(NextResponse);
     expect(timetablePrismaMock.user.update).not.toHaveBeenCalled();
     expect(timetablePrismaMock.user.create).not.toHaveBeenCalled();
-    expect(corePrismaMock.workspaceProfile.upsert).not.toHaveBeenCalled();
+    expect(corePrismaMock.workspaceProfile.findUnique).not.toHaveBeenCalled();
     expect(
       (result as Awaited<ReturnType<typeof requireAppUser>> & { localUser: { authUserId: string } }).localUser
         .authUserId
@@ -252,7 +260,7 @@ describe("server auth helpers", () => {
     expect(body.error.code).toBe("AUTH_SERVER_UNAVAILABLE");
   });
 
-  it("upserts workspace profile only for core-scoped flows", async () => {
+  it("creates a workspace profile from the legacy alias when none exists", async () => {
     const result = await ensureWorkspaceProfile({
       authUser: {
         id: "auth-user-42",
@@ -268,12 +276,16 @@ describe("server auth helpers", () => {
       },
     });
 
-    expect(corePrismaMock.workspaceProfile.upsert).toHaveBeenCalledWith({
+    expect(corePrismaMock.workspaceProfile.findUnique).toHaveBeenCalledWith({
       where: { authUserId: "auth-user-42" },
-      update: {
-        email: "user@example.com",
+      select: {
+        authUserId: true,
+        email: true,
+        alias: true,
       },
-      create: {
+    });
+    expect(corePrismaMock.workspaceProfile.create).toHaveBeenCalledWith({
+      data: {
         authUserId: "auth-user-42",
         email: "user@example.com",
         alias: "fallback-alias",
@@ -285,6 +297,43 @@ describe("server auth helpers", () => {
       },
     });
     expect(result.alias).toBe("fallback-alias");
+  });
+
+  it("reconciles a stale core alias from the newer legacy alias", async () => {
+    corePrismaMock.workspaceProfile.findUnique.mockResolvedValue({
+      authUserId: "auth-user-77",
+      email: "user@example.com",
+      alias: "stale-core-alias",
+    });
+
+    const result = await ensureWorkspaceProfile({
+      authUser: {
+        id: "auth-user-77",
+        email: "user@example.com",
+        name: "Test User",
+        role: "USER",
+      },
+      localUser: {
+        id: 77,
+        authUserId: "auth-user-77",
+        email: "user@example.com",
+        alias: "newer-legacy-alias",
+      },
+    });
+
+    expect(corePrismaMock.workspaceProfile.update).toHaveBeenCalledWith({
+      where: { authUserId: "auth-user-77" },
+      data: {
+        email: "user@example.com",
+        alias: "newer-legacy-alias",
+      },
+      select: {
+        authUserId: true,
+        email: true,
+        alias: true,
+      },
+    });
+    expect(result.alias).toBe("newer-legacy-alias");
   });
 
   it("syncs the legacy local alias only when it changes", async () => {
