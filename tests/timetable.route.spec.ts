@@ -15,8 +15,8 @@ vi.mock("@/lib/server-auth", () => ({
   requireAppUser: requireAppUserMock,
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: prismaMock,
+vi.mock("@/lib/prisma/timetable", () => ({
+  timetablePrisma: prismaMock,
 }));
 
 import { GET, POST } from "@/app/api/timetable/route";

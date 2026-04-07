@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { timetablePrisma } from "@/lib/prisma/timetable";
 import { requireAppUser } from "@/lib/server-auth";
 
 type LessonInput = {
@@ -141,9 +141,9 @@ export async function POST(req: Request) {
       });
     }
 
-    await prisma.$transaction([
-      prisma.lesson.deleteMany({ where: { userId: resolvedUserId } }),
-      prisma.lesson.createMany({ data: dbRecords }),
+    await timetablePrisma.$transaction([
+      timetablePrisma.lesson.deleteMany({ where: { userId: resolvedUserId } }),
+      timetablePrisma.lesson.createMany({ data: dbRecords }),
     ]);
 
     return NextResponse.json(
@@ -168,7 +168,7 @@ export async function GET(req: Request) {
       return resolvedUserId;
     }
 
-    const dbRecords = await prisma.lesson.findMany({
+    const dbRecords = await timetablePrisma.lesson.findMany({
       where: { userId: resolvedUserId },
     });
 

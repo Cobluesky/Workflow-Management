@@ -6,6 +6,8 @@
 - `ARCHITECTURE.md`
 - `HANDOUT.md`
 - `FILE_SPEC.md`
+- `MODULE_DB_REFACTOR.md`
+- `SPLIT_SCOPE.md`
 - `API_SPEC.md`
 - `DEPLOYMENT.md`
 - `Requirements.md`
@@ -35,3 +37,6 @@
 - 인증 서버 CORS 및 HTTPS 적용 완료
 - 일반 로그인, 회원가입, Refresh, OAuth 브라우저 검증 완료
 - 메인 페이지 파일: `app/page.tsx`
+- 실제 모듈: `timetable`, `mypage`, `calendar`, `tasks`
+- DB 분리 리팩토링은 `MODULE_DB_REFACTOR.md`를 기준으로 진행
+- 멀티 스키마 전환 중이며 runtime Prisma client는 `prisma/schemas/*.prisma` 기반 generated client를 사용하기 시작함

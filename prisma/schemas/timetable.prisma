@@ -1,0 +1,34 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/timetable"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         Int      @id @default(autoincrement())
+  authUserId                 String?  @unique
+  email                      String   @unique
+  password                   String
+  alias                      String?
+  lessons                    Lesson[]
+  createdAt                  DateTime @default(now())
+}
+
+model Lesson {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  subjectName String
+  roomName    String
+  dayOfWeek   Int
+  startPeriod Int
+  endPeriod   Int
+  colorCode   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { corePrisma } from "@/lib/prisma/core";
+import { timetablePrisma } from "@/lib/prisma/timetable";
+import { Prisma } from "@/prisma/generated/timetable";
 import { AUTH_SERVER_URL, LOCAL_AUTH_PLACEHOLDER_PASSWORD } from "@/lib/auth-config";
 
 interface VerifiedAuthUser {
@@ -119,7 +120,7 @@ async function resolveLocalUser(
   attempt = 0
 ): Promise<LocalUserRecord | NextResponse> {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await timetablePrisma.$transaction(async (tx) => {
       const queries = localUserQueries(tx, authUser);
       const userByAuthUserId = await queries.findByAuthUserId();
 
@@ -170,6 +171,46 @@ async function resolveLocalUser(
 
     throw error;
   }
+}
+
+export async function ensureWorkspaceProfile(
+  appUser: Pick<RequireAppUserResult, "authUser" | "localUser">
+) {
+  return corePrisma.workspaceProfile.upsert({
+    where: { authUserId: appUser.authUser.id },
+    update: {
+      email: appUser.authUser.email,
+    },
+    create: {
+      authUserId: appUser.authUser.id,
+      email: appUser.authUser.email,
+      alias: appUser.localUser.alias,
+    },
+    select: {
+      authUserId: true,
+      email: true,
+      alias: true,
+    },
+  });
+}
+
+export async function syncLegacyLocalAlias(
+  appUser: Pick<RequireAppUserResult, "localUser">,
+  alias: string | null
+) {
+  if (appUser.localUser.alias === alias) {
+    return appUser.localUser.alias;
+  }
+
+  const updatedUser = await timetablePrisma.user.update({
+    where: { id: appUser.localUser.id },
+    data: { alias },
+    select: {
+      alias: true,
+    },
+  });
+
+  return updatedUser.alias;
 }
 
 export async function requireAppUser(req: Request): Promise<RequireAppUserResult | NextResponse> {

@@ -41,6 +41,9 @@
 ### APP_ENV_FILE
 ```env
 DATABASE_URL=mysql://timetable_user:app_password@host.docker.internal:3306/timetable_db
+WORKSPACE_CORE_DATABASE_URL=mysql://workspace_core_user:workspace_core_password@host.docker.internal:3306/workspace_core
+CALENDAR_DATABASE_URL=mysql://calendar_user:calendar_password@host.docker.internal:3306/calendar_db
+TASKS_DATABASE_URL=mysql://tasks_user:tasks_password@host.docker.internal:3306/tasks_db
 AUTH_SERVER_URL=https://auth.workspace.p-e.kr
 NEXT_PUBLIC_AUTH_SERVER_URL=https://auth.workspace.p-e.kr
 ```

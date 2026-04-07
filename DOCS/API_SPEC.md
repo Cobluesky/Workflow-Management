@@ -343,6 +343,130 @@ Content-Type: application/json
 - 모듈 구성은 `timetable_db.WorkspaceModulePreference`에 저장한다
 - 현재 저장소와 계획 저장소는 UI 메타데이터로 별도 노출한다
 
+### 5.3 캘린더 이벤트 조회
+`GET /api/calendar?month=YYYY-MM`
+
+요청 헤더:
+```http
+Authorization: Bearer <accessToken>
+```
+
+성공 응답:
+`200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "id": 1,
+        "title": "팀 미팅",
+        "description": null,
+        "location": "회의실",
+        "startsAt": "2026-04-10T01:00:00.000Z",
+        "endsAt": "2026-04-10T02:00:00.000Z",
+        "colorToken": "indigo",
+        "isAllDay": false
+      }
+    ]
+  }
+}
+```
+
+참고:
+- 현재 캘린더 모듈은 앱 DB(`timetable_db`)를 사용한다
+- 월 경계의 로컬 일정 누락을 막기 위해 서버는 UTC 조회 범위를 완충해서 조회한다
+
+### 5.4 캘린더 이벤트 저장
+`POST /api/calendar`
+
+요청 헤더:
+```http
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+요청 바디:
+```json
+{
+  "title": "팀 미팅",
+  "description": "발표 자료 점검",
+  "location": "회의실",
+  "startsAt": "2026-04-10T01:00:00.000Z",
+  "endsAt": "2026-04-10T02:00:00.000Z",
+  "colorToken": "indigo",
+  "isAllDay": false
+}
+```
+
+추가 작업:
+- `PATCH /api/calendar`
+- `DELETE /api/calendar`
+
+참고:
+- 모든 변경은 인증된 로컬 앱 사용자 기준으로만 수행한다
+- 클라이언트가 보낸 별도 `userId`는 사용하지 않는다
+
+### 5.5 할 일 목록 조회
+`GET /api/tasks`
+
+요청 헤더:
+```http
+Authorization: Bearer <accessToken>
+```
+
+성공 응답:
+`200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "보고서 초안 정리",
+        "description": "월간 회의 전에 초안 정리",
+        "dueDate": "2026-04-07T14:59:00.000Z",
+        "status": "todo",
+        "priority": "high",
+        "createdAt": "2026-04-02T01:00:00.000Z",
+        "updatedAt": "2026-04-02T03:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+### 5.6 할 일 저장
+`POST /api/tasks`
+
+요청 헤더:
+```http
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+요청 바디:
+```json
+{
+  "title": "보고서 초안 정리",
+  "description": "월간 회의 전에 초안 정리",
+  "dueDate": "2026-04-07T14:59:00.000Z",
+  "status": "todo",
+  "priority": "high"
+}
+```
+
+추가 작업:
+- `PATCH /api/tasks`
+- `DELETE /api/tasks`
+
+참고:
+- 현재 할 일 모듈은 앱 DB(`timetable_db`)를 사용한다
+- 장기적으로 `tasks_db`로 분리할 계획이다
+
 ## 6. JWT Claim
 ```json
 {
@@ -356,6 +480,7 @@ Content-Type: application/json
 ```
 
 ## 7. 현재 구현 메모
+- runtime Prisma client는 `core / timetable / calendar / tasks` 경계로 분리되기 시작했고, migration 기준은 당분간 통합 [prisma/schema.prisma](/C:/workflow-management/prisma/schema.prisma)를 유지한다
 - 로컬 인증은 구현 완료
 - OAuth는 Google/Kakao/GitHub 공통 흐름 코드가 추가된 상태
 - 운영 환경에서 OAuth 브라우저 검증 완료
@@ -364,3 +489,4 @@ Content-Type: application/json
 - 프론트 회원가입 폼은 현재 서버 검증 규칙에 맞춰 사전 validation을 수행한다
 - 운영 CORS 이슈를 반영해 env 문자열과 Origin 비교는 정규화된 값으로 처리한다
 - 워크스페이스 사이드바의 활성 모듈 목록은 서버 저장 방식으로 전환됐다
+- `calendar`와 `tasks` API는 현재 앱 DB를 사용하지만, API 계약은 유지한 채 모듈별 DB로 분리할 계획이다

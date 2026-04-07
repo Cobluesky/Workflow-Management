@@ -30,6 +30,11 @@
 - [x] 회원가입 프론트 validation 보강
 
 ## 2. 현재 최우선 작업
+- [ ] 모듈 DB 분리 리팩토링 기준 확정
+- [ ] `workspace_core` / `profile_db` 책임 범위 결정
+- [ ] `tasks_db`를 첫 분리 대상으로 확정
+- [x] Prisma multi-schema 구조 초안 작성
+- [x] `tasks` runtime Prisma client를 `authUserId` 기준 모듈 저장소 구조에 맞게 정리
 - [ ] `workspace_auth` DB 스키마를 기준 문서와 일치하는지 최종 점검
 - [x] 운영 `APP_ENV_FILE`과 `AUTH_ENV_FILE` 템플릿을 실제 운영값 기준으로 다시 검토
 - [ ] `DOCS/Requirements.md`를 최신 운영 상태 기준으로 보강
@@ -72,8 +77,17 @@
 - [x] 사용자별 활성 모듈 목록을 서버(`WorkspaceModulePreference`)에 저장
 - [x] 모듈별 현재 저장소와 계획 저장소를 구분해서 노출
 - [ ] 모듈 순서 변경 UX 설계
-- [ ] `calendar`, `tasks`, `projects` 중 첫 번째 실제 모듈 구현 시작
-- [ ] 모듈별 전용 DB와 Prisma 클라이언트 분리 전략 문서화
+- [x] `calendar` 모듈 1차 구현
+- [x] `tasks` 모듈 1차 구현
+- [ ] `projects` 모듈 1차 구현
+- [x] 모듈별 전용 DB와 Prisma 클라이언트 분리 전략 문서화
+- [ ] `WorkspaceModulePreference`를 `workspace_core`로 이동
+- [ ] 별명/프로필 데이터를 `workspace_core` 또는 `profile_db`로 이동
+- [ ] `TaskItem`을 `tasks_db`로 이동
+- [x] `/api/tasks`를 tasks 전용 Prisma client로 전환
+- [ ] `CalendarEvent`를 `calendar_db`로 이동
+- [x] `/api/calendar`를 calendar 전용 Prisma client로 전환
+- [ ] `timetable_db`를 시간표 전용 스키마로 축소
 
 ## 7. OAuth 운영 전환
 - [x] 운영 `AUTH_ENV_FILE`에 실제 OAuth 키 반영
@@ -118,6 +132,8 @@
 - [ ] 서브도메인 쿠키 동작 장기 검증
 - [ ] 로그아웃 후 refresh 차단 장기 검증
 - [ ] `authUserId` 전환 이후 회귀 테스트 추가
+- [x] `calendar` API 테스트 추가
+- [x] `tasks` API 테스트 추가
 
 ## 11. 문서 정리
 - [x] `DOCS/ARCHITECTURE.md` 작성
@@ -126,6 +142,7 @@
 - [x] `DOCS/DEPLOYMENT.md`에 운영 env/DB 연결 규칙 반영
 - [x] `DOCS/auth-server/README.md`를 현재 구현 기준으로 재작성
 - [x] 모듈 워크스페이스 구조와 저장 방식 반영
+- [x] `DOCS/MODULE_DB_REFACTOR.md`에 모듈 DB 분리 전략 정리
 - [ ] `DOCS/Requirements.md`를 최신 운영 상태 기준으로 보강
 - [ ] `DOCS/auth-server/VERIFICATION.md`를 운영 검증 절차 기준으로 보강
 

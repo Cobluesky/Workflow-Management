@@ -31,6 +31,7 @@ jobs:
               - "app/**"
               - "lib/**"
               - "prisma/**"
+              - "scripts/**"
               - "public/**"
               - "package.json"
               - "package-lock.json"
@@ -145,6 +146,34 @@ jobs:
           print(f"APP_ENV_FILE diagnostics: bytes={len(text.encode('utf-8'))}, lines={len(lines)}, parsedKeys={', '.join(keys) if keys else '(none)'}")
           PY
 
+      - name: Validate Split Database Env Keys
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required_keys = {
+            "DATABASE_URL",
+            "WORKSPACE_CORE_DATABASE_URL",
+            "CALENDAR_DATABASE_URL",
+            "TASKS_DATABASE_URL",
+          }
+
+          path = Path("/tmp/timetable-web.env")
+          parsed_keys = set()
+
+          for raw in path.read_text(encoding="utf-8").replace("\r", "").split("\n"):
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+              continue
+            parsed_keys.add(line.split("=", 1)[0].strip())
+
+          missing = sorted(required_keys - parsed_keys)
+
+          if missing:
+            raise SystemExit(f"Missing required APP_ENV_FILE keys: {', '.join(missing)}")
+          PY
+
       - name: Build and Push App Image
         uses: docker/build-push-action@v4
         with:
@@ -187,7 +216,7 @@ jobs:
             sudo docker run --rm --add-host=host.docker.internal:host-gateway \
               --env-file /opt/workspace/env/timetable-web.env \
               ${{ secrets.DOCKER_USERNAME }}/timetable-web-migrator:latest \
-              sh -lc "npx prisma db push --schema prisma/schema.prisma"
+              sh -lc "node ./scripts/run-prisma-workspaces.mjs db-push timetable && node ./scripts/run-prisma-workspaces.mjs db-push core && node ./scripts/run-prisma-workspaces.mjs db-push calendar && node ./scripts/run-prisma-workspaces.mjs db-push tasks"
             sudo docker stop timetable-web || true
             sudo docker rm timetable-web || true
             sudo docker run -d --restart unless-stopped --add-host=host.docker.internal:host-gateway -p 127.0.0.1:3000:3000 --name timetable-web \

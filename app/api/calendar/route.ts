@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { calendarPrisma } from "@/lib/prisma/calendar";
 import { requireAppUser } from "@/lib/server-auth";
 
 const VALID_COLOR_TOKENS = new Set(["indigo", "blue", "emerald", "amber", "rose", "violet"]);
@@ -119,9 +119,9 @@ export async function GET(req: Request) {
       return errorResponse("INVALID_MONTH", "month must follow YYYY-MM format.", 400);
     }
 
-    const events = await prisma.calendarEvent.findMany({
+    const events = await calendarPrisma.calendarEvent.findMany({
       where: {
-        userId: appUser.localUser.id,
+        authUserId: appUser.authUser.id,
         startsAt: {
           lt: range.queryEnd,
         },
@@ -171,9 +171,9 @@ export async function POST(req: Request) {
       return errorResponse("INVALID_EVENT", "Calendar event payload is invalid.", 400);
     }
 
-    const createdEvent = await prisma.calendarEvent.create({
+    const createdEvent = await calendarPrisma.calendarEvent.create({
       data: {
-        userId: appUser.localUser.id,
+        authUserId: appUser.authUser.id,
         title: payload.title,
         description: payload.description,
         location: payload.location,
@@ -225,10 +225,10 @@ export async function PATCH(req: Request) {
       return errorResponse("INVALID_EVENT", "Calendar event payload is invalid.", 400);
     }
 
-    const existingEvent = await prisma.calendarEvent.findFirst({
+    const existingEvent = await calendarPrisma.calendarEvent.findFirst({
       where: {
         id: eventId,
-        userId: appUser.localUser.id,
+        authUserId: appUser.authUser.id,
       },
       select: { id: true },
     });
@@ -237,7 +237,7 @@ export async function PATCH(req: Request) {
       return errorResponse("CALENDAR_EVENT_NOT_FOUND", "Calendar event could not be found.", 404);
     }
 
-    const updatedEvent = await prisma.calendarEvent.update({
+    const updatedEvent = await calendarPrisma.calendarEvent.update({
       where: { id: eventId },
       data: {
         title: payload.title,
@@ -290,10 +290,10 @@ export async function DELETE(req: Request) {
       return errorResponse("INVALID_EVENT_ID", "Calendar event id is invalid.", 400);
     }
 
-    const deletedEvent = await prisma.calendarEvent.deleteMany({
+    const deletedEvent = await calendarPrisma.calendarEvent.deleteMany({
       where: {
         id: eventId,
-        userId: appUser.localUser.id,
+        authUserId: appUser.authUser.id,
       },
     });
 

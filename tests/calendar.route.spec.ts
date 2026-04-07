@@ -16,8 +16,8 @@ vi.mock("@/lib/server-auth", () => ({
   requireAppUser: requireAppUserMock,
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: prismaMock,
+vi.mock("@/lib/prisma/calendar", () => ({
+  calendarPrisma: prismaMock,
 }));
 
 import { DELETE, GET, PATCH, POST } from "@/app/api/calendar/route";
@@ -29,6 +29,7 @@ describe("calendar route", () => {
 
   it("GET returns events for the authenticated user and month range", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-7", email: "user@example.com" },
       localUser: { id: 7, email: "user@example.com", alias: "user" },
     });
     prismaMock.calendarEvent.findMany.mockResolvedValue([
@@ -51,7 +52,7 @@ describe("calendar route", () => {
     expect(prismaMock.calendarEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          userId: 7,
+          authUserId: "auth-user-7",
         }),
       })
     );
@@ -60,6 +61,7 @@ describe("calendar route", () => {
 
   it("GET widens the month query to include local-time boundary events", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-7", email: "user@example.com" },
       localUser: { id: 7, email: "user@example.com", alias: "user" },
     });
     prismaMock.calendarEvent.findMany.mockResolvedValue([]);
@@ -69,7 +71,7 @@ describe("calendar route", () => {
     expect(prismaMock.calendarEvent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          userId: 7,
+          authUserId: "auth-user-7",
           startsAt: {
             lt: new Date("2026-05-02T00:00:00.000Z"),
           },
@@ -83,6 +85,7 @@ describe("calendar route", () => {
 
   it("GET rejects invalid month values", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-7", email: "user@example.com" },
       localUser: { id: 7, email: "user@example.com", alias: "user" },
     });
 
@@ -95,6 +98,7 @@ describe("calendar route", () => {
 
   it("POST creates a calendar event for the authenticated user", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-11", email: "user@example.com" },
       localUser: { id: 11, email: "user@example.com", alias: "user" },
     });
     prismaMock.calendarEvent.create.mockResolvedValue({
@@ -129,7 +133,7 @@ describe("calendar route", () => {
     expect(prismaMock.calendarEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          userId: 11,
+          authUserId: "auth-user-11",
           title: "면담",
           colorToken: "blue",
         }),
@@ -140,6 +144,7 @@ describe("calendar route", () => {
 
   it("PATCH updates only the authenticated user's event", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-13", email: "user@example.com" },
       localUser: { id: 13, email: "user@example.com", alias: "user" },
     });
     prismaMock.calendarEvent.findFirst.mockResolvedValue({ id: 9 });
@@ -174,7 +179,7 @@ describe("calendar route", () => {
     expect(prismaMock.calendarEvent.findFirst).toHaveBeenCalledWith({
       where: {
         id: 9,
-        userId: 13,
+        authUserId: "auth-user-13",
       },
       select: { id: true },
     });
@@ -183,6 +188,7 @@ describe("calendar route", () => {
 
   it("DELETE removes only the authenticated user's event", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: { id: "auth-user-14", email: "user@example.com" },
       localUser: { id: 14, email: "user@example.com", alias: "user" },
     });
     prismaMock.calendarEvent.deleteMany.mockResolvedValue({ count: 1 });
@@ -200,7 +206,7 @@ describe("calendar route", () => {
     expect(prismaMock.calendarEvent.deleteMany).toHaveBeenCalledWith({
       where: {
         id: 4,
-        userId: 14,
+        authUserId: "auth-user-14",
       },
     });
     expect(body.success).toBe(true);

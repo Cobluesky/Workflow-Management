@@ -315,7 +315,7 @@ export default function CalendarModule() {
   return (
     <AppShell
       title="캘린더"
-      description="월간 일정과 개인 이벤트를 관리하는 캘린더 모듈입니다. 현재는 앱 DB를 사용하고, 이후 calendar_db로 분리할 수 있게 경계를 잡아둔 상태입니다."
+      description="월간 일정과 개인 이벤트를 관리하는 캘린더 모듈입니다. 캘린더 전용 Prisma 경계를 사용하며, 배포 env에서 CALENDAR_DATABASE_URL을 지정하면 calendar_db로 분리할 수 있습니다."
     >
       <div className="flex flex-col gap-6">
         <section className="rounded-3xl border border-slate-100 bg-white p-8 shadow-sm">

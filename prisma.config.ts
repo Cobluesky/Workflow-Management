@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import { defineConfig } from "prisma/config";
 
-// Prisma CLI reads DATABASE_URL from the root .env file.
+// Root Prisma config for the timetable domain. Split domains such as core,
+// calendar, and tasks are generated and pushed through scripts/run-prisma-workspaces.mjs.
 dotenv.config({ path: ".env" });
 
 export default defineConfig({

@@ -1,9 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+export { corePrisma as prisma } from "@/lib/prisma/core";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 // TOO MANY CONNECTION 방지용

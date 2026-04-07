@@ -1,0 +1,25 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/tasks"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model TaskItem {
+  id          Int      @id @default(autoincrement())
+  authUserId  String
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String   @default("todo")
+  priority    String   @default("medium")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([authUserId, status])
+  @@index([authUserId, dueDate])
+}

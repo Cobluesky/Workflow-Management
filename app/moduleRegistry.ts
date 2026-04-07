@@ -44,8 +44,9 @@ export const WORKSPACE_MODULES: WorkspaceModule[] = [
     label: "할 일",
     href: "/tasks",
     description: "개인 작업과 마감 일정을 관리하는 모듈",
-    availability: "planned",
-    currentDatabase: null,
+    availability: "live",
+    defaultEnabled: false,
+    currentDatabase: "timetable_db",
     plannedDatabase: "tasks_db"
   },
   {

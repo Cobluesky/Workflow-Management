@@ -1,0 +1,27 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/calendar"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model CalendarEvent {
+  id          Int      @id @default(autoincrement())
+  authUserId  String
+  title       String
+  description String?
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  colorToken  String   @default("indigo")
+  isAllDay    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([authUserId, startsAt])
+  @@index([authUserId, endsAt])
+}

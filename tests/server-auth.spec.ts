@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
-const prismaMock = vi.hoisted(() => ({
+const timetablePrismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
   user: {
     findUnique: vi.fn(),
@@ -10,11 +10,21 @@ const prismaMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: prismaMock,
+const corePrismaMock = vi.hoisted(() => ({
+  workspaceProfile: {
+    upsert: vi.fn(),
+  },
 }));
 
-import { requireAppUser } from "@/lib/server-auth";
+vi.mock("@/lib/prisma/core", () => ({
+  corePrisma: corePrismaMock,
+}));
+
+vi.mock("@/lib/prisma/timetable", () => ({
+  timetablePrisma: timetablePrismaMock,
+}));
+
+import { ensureWorkspaceProfile, requireAppUser, syncLegacyLocalAlias } from "@/lib/server-auth";
 
 const fetchMock = vi.fn();
 
@@ -26,13 +36,18 @@ function createAuthorizedRequest() {
   });
 }
 
-describe("requireAppUser", () => {
+describe("server auth helpers", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.stubGlobal("fetch", fetchMock);
-    prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) =>
-      callback(prismaMock)
+    timetablePrismaMock.$transaction.mockImplementation(
+      async (callback: (tx: typeof timetablePrismaMock) => unknown) => callback(timetablePrismaMock)
     );
+    corePrismaMock.workspaceProfile.upsert.mockImplementation(async ({ create, update, where }: any) => ({
+      authUserId: where.authUserId,
+      email: update?.email ?? create.email,
+      alias: create.alias ?? null,
+    }));
   });
 
   it("returns 401 when bearer token is missing", async () => {
@@ -46,7 +61,7 @@ describe("requireAppUser", () => {
     expect(body.error.code).toBe("UNAUTHORIZED");
   });
 
-  it("prefers authUserId mapping when local user already exists", async () => {
+  it("prefers authUserId mapping without touching workspace_core", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -54,35 +69,37 @@ describe("requireAppUser", () => {
           user: {
             id: "auth-user-1",
             email: "user@example.com",
-            name: "홍길동",
+            name: "Test User",
             role: "USER",
           },
         },
       }),
     });
 
-    prismaMock.user.findUnique
+    timetablePrismaMock.user.findUnique
       .mockResolvedValueOnce({
         id: 1,
         authUserId: "auth-user-1",
         email: "user@example.com",
-        alias: "테스터",
+        alias: "tester",
       })
       .mockResolvedValueOnce({
         id: 1,
         authUserId: "auth-user-1",
         email: "user@example.com",
-        alias: "테스터",
+        alias: "tester",
       });
 
     const result = await requireAppUser(createAuthorizedRequest());
 
     expect(result).not.toBeInstanceOf(NextResponse);
-    expect(prismaMock.user.update).not.toHaveBeenCalled();
-    expect(prismaMock.user.create).not.toHaveBeenCalled();
-    expect((result as Awaited<ReturnType<typeof requireAppUser>> & { localUser: { authUserId: string } }).localUser.authUserId).toBe(
-      "auth-user-1"
-    );
+    expect(timetablePrismaMock.user.update).not.toHaveBeenCalled();
+    expect(timetablePrismaMock.user.create).not.toHaveBeenCalled();
+    expect(corePrismaMock.workspaceProfile.upsert).not.toHaveBeenCalled();
+    expect(
+      (result as Awaited<ReturnType<typeof requireAppUser>> & { localUser: { authUserId: string } }).localUser
+        .authUserId
+    ).toBe("auth-user-1");
   });
 
   it("backfills authUserId using email fallback", async () => {
@@ -93,14 +110,14 @@ describe("requireAppUser", () => {
           user: {
             id: "auth-user-2",
             email: "user@example.com",
-            name: "홍길동",
+            name: "Test User",
             role: "USER",
           },
         },
       }),
     });
 
-    prismaMock.user.findUnique
+    timetablePrismaMock.user.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
         id: 7,
@@ -108,7 +125,7 @@ describe("requireAppUser", () => {
         email: "user@example.com",
         alias: null,
       });
-    prismaMock.user.update.mockResolvedValue({
+    timetablePrismaMock.user.update.mockResolvedValue({
       id: 7,
       authUserId: "auth-user-2",
       email: "user@example.com",
@@ -117,7 +134,7 @@ describe("requireAppUser", () => {
 
     const result = await requireAppUser(createAuthorizedRequest());
 
-    expect(prismaMock.user.update).toHaveBeenCalledWith({
+    expect(timetablePrismaMock.user.update).toHaveBeenCalledWith({
       where: { id: 7 },
       data: {
         authUserId: "auth-user-2",
@@ -130,9 +147,10 @@ describe("requireAppUser", () => {
       },
     });
     expect(result).not.toBeInstanceOf(NextResponse);
-    expect((result as Awaited<ReturnType<typeof requireAppUser>> & { localUser: { authUserId: string } }).localUser.authUserId).toBe(
-      "auth-user-2"
-    );
+    expect(
+      (result as Awaited<ReturnType<typeof requireAppUser>> & { localUser: { authUserId: string } }).localUser
+        .authUserId
+    ).toBe("auth-user-2");
   });
 
   it("creates a new local user when no mapping exists", async () => {
@@ -143,15 +161,15 @@ describe("requireAppUser", () => {
           user: {
             id: "auth-user-3",
             email: "new@example.com",
-            name: "홍길동",
+            name: "Test User",
             role: "USER",
           },
         },
       }),
     });
 
-    prismaMock.user.findUnique.mockResolvedValue(null);
-    prismaMock.user.create.mockResolvedValue({
+    timetablePrismaMock.user.findUnique.mockResolvedValue(null);
+    timetablePrismaMock.user.create.mockResolvedValue({
       id: 11,
       authUserId: "auth-user-3",
       email: "new@example.com",
@@ -160,7 +178,7 @@ describe("requireAppUser", () => {
 
     const result = await requireAppUser(createAuthorizedRequest());
 
-    expect(prismaMock.user.create).toHaveBeenCalledWith({
+    expect(timetablePrismaMock.user.create).toHaveBeenCalledWith({
       data: {
         authUserId: "auth-user-3",
         email: "new@example.com",
@@ -186,14 +204,14 @@ describe("requireAppUser", () => {
           user: {
             id: "auth-user-4",
             email: "conflict@example.com",
-            name: "홍길동",
+            name: "Test User",
             role: "USER",
           },
         },
       }),
     });
 
-    prismaMock.user.findUnique
+    timetablePrismaMock.user.findUnique
       .mockResolvedValueOnce({
         id: 1,
         authUserId: "auth-user-4",
@@ -232,5 +250,82 @@ describe("requireAppUser", () => {
 
     expect(response.status).toBe(502);
     expect(body.error.code).toBe("AUTH_SERVER_UNAVAILABLE");
+  });
+
+  it("upserts workspace profile only for core-scoped flows", async () => {
+    const result = await ensureWorkspaceProfile({
+      authUser: {
+        id: "auth-user-42",
+        email: "user@example.com",
+        name: "Test User",
+        role: "USER",
+      },
+      localUser: {
+        id: 42,
+        authUserId: "auth-user-42",
+        email: "user@example.com",
+        alias: "fallback-alias",
+      },
+    });
+
+    expect(corePrismaMock.workspaceProfile.upsert).toHaveBeenCalledWith({
+      where: { authUserId: "auth-user-42" },
+      update: {
+        email: "user@example.com",
+      },
+      create: {
+        authUserId: "auth-user-42",
+        email: "user@example.com",
+        alias: "fallback-alias",
+      },
+      select: {
+        authUserId: true,
+        email: true,
+        alias: true,
+      },
+    });
+    expect(result.alias).toBe("fallback-alias");
+  });
+
+  it("syncs the legacy local alias only when it changes", async () => {
+    timetablePrismaMock.user.update.mockResolvedValue({
+      alias: "core-alias",
+    });
+
+    const unchangedAlias = await syncLegacyLocalAlias(
+      {
+        localUser: {
+          id: 7,
+          authUserId: "auth-user-7",
+          email: "user@example.com",
+          alias: "core-alias",
+        },
+      },
+      "core-alias"
+    );
+
+    expect(unchangedAlias).toBe("core-alias");
+    expect(timetablePrismaMock.user.update).not.toHaveBeenCalled();
+
+    const syncedAlias = await syncLegacyLocalAlias(
+      {
+        localUser: {
+          id: 7,
+          authUserId: "auth-user-7",
+          email: "user@example.com",
+          alias: "legacy-alias",
+        },
+      },
+      "core-alias"
+    );
+
+    expect(timetablePrismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { alias: "core-alias" },
+      select: {
+        alias: true,
+      },
+    });
+    expect(syncedAlias).toBe("core-alias");
   });
 });

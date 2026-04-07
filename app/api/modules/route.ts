@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { corePrisma } from "@/lib/prisma/core";
 import { requireAppUser } from "@/lib/server-auth";
 import { DEFAULT_ENABLED_MODULE_IDS, WORKSPACE_MODULES } from "@/app/moduleRegistry";
 
@@ -43,16 +43,16 @@ function normalizeModuleIds(input: unknown): string[] | null {
   return uniqueModuleIds;
 }
 
-async function readOrInitializeModules(userId: number) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+async function readOrInitializeModules(authUserId: string) {
+  const moduleState = await corePrisma.workspaceModuleState.findUnique({
+    where: { authUserId },
     select: {
       workspaceModulesInitialized: true,
     },
   });
 
-  const storedModules = await prisma.workspaceModulePreference.findMany({
-    where: { userId },
+  const storedModules = await corePrisma.workspaceModulePreference.findMany({
+    where: { authUserId },
     orderBy: { position: "asc" },
     select: {
       moduleId: true,
@@ -63,21 +63,25 @@ async function readOrInitializeModules(userId: number) {
     return storedModules.map((module) => module.moduleId);
   }
 
-  if (user?.workspaceModulesInitialized) {
+  if (moduleState?.workspaceModulesInitialized) {
     return [];
   }
 
-  await prisma.$transaction(async (tx) => {
+  await corePrisma.$transaction(async (tx) => {
     await tx.workspaceModulePreference.createMany({
       data: DEFAULT_ENABLED_MODULE_IDS.map((moduleId, index) => ({
-        userId,
+        authUserId,
         moduleId,
         position: index,
       })),
     });
-    await tx.user.update({
-      where: { id: userId },
-      data: {
+    await tx.workspaceModuleState.upsert({
+      where: { authUserId },
+      update: {
+        workspaceModulesInitialized: true,
+      },
+      create: {
+        authUserId,
         workspaceModulesInitialized: true,
       },
     });
@@ -94,7 +98,7 @@ export async function GET(req: Request) {
       return appUser;
     }
 
-    const enabledModuleIds = await readOrInitializeModules(appUser.localUser.id);
+    const enabledModuleIds = await readOrInitializeModules(appUser.authUser.id);
     return successResponse({ enabledModuleIds });
   } catch (error) {
     console.error("Failed to load workspace modules", error);
@@ -117,24 +121,28 @@ export async function PATCH(req: Request) {
       return errorResponse("INVALID_MODULE_CONFIG", "모듈 구성 형식이 올바르지 않습니다.", 400);
     }
 
-    await prisma.$transaction(async (tx) => {
+    await corePrisma.$transaction(async (tx) => {
       await tx.workspaceModulePreference.deleteMany({
-        where: { userId: appUser.localUser.id },
+        where: { authUserId: appUser.authUser.id },
       });
 
       if (enabledModuleIds.length > 0) {
         await tx.workspaceModulePreference.createMany({
           data: enabledModuleIds.map((moduleId, index) => ({
-            userId: appUser.localUser.id,
+            authUserId: appUser.authUser.id,
             moduleId,
             position: index,
           })),
         });
       }
 
-      await tx.user.update({
-        where: { id: appUser.localUser.id },
-        data: {
+      await tx.workspaceModuleState.upsert({
+        where: { authUserId: appUser.authUser.id },
+        update: {
+          workspaceModulesInitialized: true,
+        },
+        create: {
+          authUserId: appUser.authUser.id,
           workspaceModulesInitialized: true,
         },
       });

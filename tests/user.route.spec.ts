@@ -2,18 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
 
 const requireAppUserMock = vi.hoisted(() => vi.fn());
+const ensureWorkspaceProfileMock = vi.hoisted(() => vi.fn());
+const syncLegacyLocalAliasMock = vi.hoisted(() => vi.fn());
 const prismaMock = vi.hoisted(() => ({
-  user: {
-    update: vi.fn(),
+  workspaceProfile: {
+    upsert: vi.fn(),
   },
 }));
 
 vi.mock("@/lib/server-auth", () => ({
+  ensureWorkspaceProfile: ensureWorkspaceProfileMock,
   requireAppUser: requireAppUserMock,
+  syncLegacyLocalAlias: syncLegacyLocalAliasMock,
 }));
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: prismaMock,
+vi.mock("@/lib/prisma/core", () => ({
+  corePrisma: prismaMock,
 }));
 
 import { GET, PATCH } from "@/app/api/user/route";
@@ -23,31 +27,73 @@ describe("user route", () => {
     vi.resetAllMocks();
   });
 
-  it("GET returns current alias", async () => {
+  it("GET returns the alias from workspace_core and syncs the legacy alias", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-1",
+        email: "user@example.com",
+      },
       localUser: {
         id: 1,
+        authUserId: "auth-user-1",
         email: "user@example.com",
-        alias: "테스터",
+        alias: "legacy-alias",
       },
+    });
+    ensureWorkspaceProfileMock.mockResolvedValue({
+      authUserId: "auth-user-1",
+      email: "user@example.com",
+      alias: "core-alias",
     });
 
     const response = await GET(new Request("http://localhost:3000/api/user"));
     const body = await response.json();
 
+    expect(ensureWorkspaceProfileMock).toHaveBeenCalledWith({
+      authUser: {
+        id: "auth-user-1",
+        email: "user@example.com",
+      },
+      localUser: {
+        id: 1,
+        authUserId: "auth-user-1",
+        email: "user@example.com",
+        alias: "legacy-alias",
+      },
+    });
+    expect(syncLegacyLocalAliasMock).toHaveBeenCalledWith(
+      {
+        authUser: {
+          id: "auth-user-1",
+          email: "user@example.com",
+        },
+        localUser: {
+          id: 1,
+          authUserId: "auth-user-1",
+          email: "user@example.com",
+          alias: "legacy-alias",
+        },
+      },
+      "core-alias"
+    );
     expect(response.status).toBe(200);
     expect(body).toEqual({
       success: true,
       data: {
-        alias: "테스터",
+        alias: "core-alias",
       },
     });
   });
 
   it("PATCH rejects invalid alias", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-1",
+        email: "user@example.com",
+      },
       localUser: {
         id: 1,
+        authUserId: "auth-user-1",
         email: "user@example.com",
         alias: null,
       },
@@ -68,16 +114,21 @@ describe("user route", () => {
     expect(body.error.code).toBe("INVALID_ALIAS");
   });
 
-  it("PATCH updates alias for authenticated user", async () => {
+  it("PATCH upserts alias into workspace_core and syncs the legacy alias", async () => {
     requireAppUserMock.mockResolvedValue({
+      authUser: {
+        id: "auth-user-7",
+        email: "user@example.com",
+      },
       localUser: {
         id: 7,
+        authUserId: "auth-user-7",
         email: "user@example.com",
-        alias: null,
+        alias: "old-alias",
       },
     });
-    prismaMock.user.update.mockResolvedValue({
-      alias: "새별명",
+    prismaMock.workspaceProfile.upsert.mockResolvedValue({
+      alias: "new-alias",
     });
 
     const response = await PATCH(
@@ -86,21 +137,44 @@ describe("user route", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ newAlias: "새별명" }),
+        body: JSON.stringify({ newAlias: "new-alias" }),
       })
     );
     const body = await response.json();
 
-    expect(prismaMock.user.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: { alias: "새별명" },
+    expect(prismaMock.workspaceProfile.upsert).toHaveBeenCalledWith({
+      where: { authUserId: "auth-user-7" },
+      update: {
+        email: "user@example.com",
+        alias: "new-alias",
+      },
+      create: {
+        authUserId: "auth-user-7",
+        email: "user@example.com",
+        alias: "new-alias",
+      },
       select: { alias: true },
     });
+    expect(syncLegacyLocalAliasMock).toHaveBeenCalledWith(
+      {
+        authUser: {
+          id: "auth-user-7",
+          email: "user@example.com",
+        },
+        localUser: {
+          id: 7,
+          authUserId: "auth-user-7",
+          email: "user@example.com",
+          alias: "old-alias",
+        },
+      },
+      "new-alias"
+    );
     expect(response.status).toBe(200);
     expect(body).toEqual({
       success: true,
       data: {
-        alias: "새별명",
+        alias: "new-alias",
       },
     });
   });
@@ -109,7 +183,7 @@ describe("user route", () => {
     const authResponse = NextResponse.json(
       {
         success: false,
-        error: { code: "UNAUTHORIZED", message: "액세스 토큰이 필요합니다." },
+        error: { code: "UNAUTHORIZED", message: "�׼��� ��ū�� �ʿ��մϴ�." },
       },
       { status: 401 }
     );

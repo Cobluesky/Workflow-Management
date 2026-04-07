@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireAppUser } from "@/lib/server-auth";
+import { corePrisma } from "@/lib/prisma/core";
+import { ensureWorkspaceProfile, requireAppUser, syncLegacyLocalAlias } from "@/lib/server-auth";
 
 export async function GET(req: Request) {
   try {
@@ -10,11 +10,14 @@ export async function GET(req: Request) {
       return appUser;
     }
 
+    const workspaceProfile = await ensureWorkspaceProfile(appUser);
+    await syncLegacyLocalAlias(appUser, workspaceProfile.alias);
+
     return NextResponse.json(
       {
         success: true,
         data: {
-          alias: appUser.localUser.alias,
+          alias: workspaceProfile.alias,
         },
       },
       { status: 200 }
@@ -50,11 +53,20 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: appUser.localUser.id },
-      data: { alias: newAlias },
+    const updatedUser = await corePrisma.workspaceProfile.upsert({
+      where: { authUserId: appUser.authUser.id },
+      update: {
+        email: appUser.authUser.email,
+        alias: newAlias,
+      },
+      create: {
+        authUserId: appUser.authUser.id,
+        email: appUser.authUser.email,
+        alias: newAlias,
+      },
       select: { alias: true },
     });
+    await syncLegacyLocalAlias(appUser, updatedUser.alias);
 
     return NextResponse.json(
       {
