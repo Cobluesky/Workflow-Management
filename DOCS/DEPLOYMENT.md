@@ -76,6 +76,8 @@ curl -I https://app.workspace.p-e.kr
 - [deploy/monitoring/docker-compose.monitoring.yml](/C:/workflow-management/deploy/monitoring/docker-compose.monitoring.yml)
 - [deploy/monitoring/prometheus/prometheus.yml](/C:/workflow-management/deploy/monitoring/prometheus/prometheus.yml)
 - [deploy/monitoring/grafana/provisioning/datasources/prometheus.yml](/C:/workflow-management/deploy/monitoring/grafana/provisioning/datasources/prometheus.yml)
+- [deploy/monitoring/grafana/provisioning/dashboards/workspace-overview.yml](/C:/workflow-management/deploy/monitoring/grafana/provisioning/dashboards/workspace-overview.yml)
+- [deploy/monitoring/grafana/provisioning/dashboards/workspace-overview.json](/C:/workflow-management/deploy/monitoring/grafana/provisioning/dashboards/workspace-overview.json)
 - [deploy/env/monitoring.env.example](/C:/workflow-management/deploy/env/monitoring.env.example)
 
 ### 모니터링 실행
@@ -92,6 +94,7 @@ docker compose --env-file monitoring.env -f docker-compose.monitoring.yml up -d
 - Prometheus와 Grafana는 `127.0.0.1`에만 bind한다
 - node-exporter, mysqld-exporter는 compose 내부 bridge network에서만 노출한다
 - Grafana 외부 접속이 필요하면 SSH tunnel 또는 별도 내부용 reverse proxy를 둔다
+- Grafana는 provisioning으로 `Workspace Overview` 대시보드를 자동 로드한다
 
 ### Prometheus scrape 대상
 - `host.docker.internal:3000/api/metrics` (`timetable-web`)
