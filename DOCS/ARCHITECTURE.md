@@ -1,91 +1,174 @@
-ï»¿# ì•„í‚¤í…ì²˜
+# ¾ÆÅ°ÅØÃ³
 
-## 1. ëª©í‘œ
-- ì¸ì¦ì€ `auth-server`ì™€ `workspace_auth`ì—ë§Œ ë‘”ë‹¤.
-- ê³µí†µ í”„ë¡œí•„ê³¼ ì›Œí¬ìŠ¤í˜ì´ìŠ¤ ì„¤ì •ì€ `workspace_core`ì— ë‘”ë‹¤.
-- ê¸°ëŠ¥ ë°ì´í„°ëŠ” ëª¨ë“ˆë³„ DBë¡œ ë¶„ë¦¬í•œë‹¤.
-- ì‚¬ìš©ì ì—°ê²° í‚¤ëŠ” ì¥ê¸°ì ìœ¼ë¡œ `authUserId` í•˜ë‚˜ë¡œ í†µì¼í•œë‹¤.
+## 1. ¸ñÇ¥
+- ÀÎÁõÀº `auth-server`¿Í `workspace_auth`¿¡¸¸ µĞ´Ù.
+- °øÅë ÇÁ·ÎÇÊ°ú ¿öÅ©½ºÆäÀÌ½º ¼³Á¤Àº `workspace_core`¿¡ µĞ´Ù.
+- ±â´É µ¥ÀÌÅÍ´Â ¸ğµâº° DB·Î ºĞ¸®ÇÑ´Ù.
+- »ç¿ëÀÚ ¿¬°á Å°´Â Àå±âÀûÀ¸·Î `authUserId` ÇÏ³ª·Î ÅëÀÏÇÑ´Ù.
 
-## 2. í˜„ì¬ ì„œë¹„ìŠ¤ êµ¬ì„±
+## 2. ÇöÀç ¼­ºñ½º ±¸¼º
 - `auth.workspace.p-e.kr`
-  - ì¤‘ì•™ ì¸ì¦ ì„œë²„
+  - Áß¾Ó ÀÎÁõ ¼­¹ö
 - `app.workspace.p-e.kr`
-  - ë©”ì¸ ì›Œí¬ìŠ¤í˜ì´ìŠ¤ ì•±
+  - ¸ŞÀÎ ¿öÅ©½ºÆäÀÌ½º ¾Û
 - `project1.workspace.p-e.kr`
-  - í–¥í›„ ì¶”ê°€ ì„œë¹„ìŠ¤ ì˜ˆì •
+  - ÇâÈÄ Ãß°¡ ¼­ºñ½º ¿¹Á¤
 
-## 3. ë°ì´í„° ì†Œìœ ê¶Œ
+## 3. ÀüÃ¼ ±¸Á¶
+```mermaid
+flowchart LR
+    Client[Browser]
+    Auth[auth-server]
+    App[workspace app]
+    AuthDB[(workspace_auth)]
+    CoreDB[(workspace_core)]
+    TimeDB[(timetable_db)]
+    CalDB[(calendar_db)]
+    TaskDB[(tasks_db)]
+    ProjDB[(projects_db)]
+
+    Client --> Auth
+    Client --> App
+    Auth --> AuthDB
+    App --> Auth
+    App --> CoreDB
+    App --> TimeDB
+    App --> CalDB
+    App --> TaskDB
+    App -. planned .-> ProjDB
+```
+
+## 4. µ¥ÀÌÅÍ °æ°è
+```text
+workspace
+¦§¦¡ workspace_auth
+¦¢  ¦§¦¡ User
+¦¢  ¦§¦¡ OAuthAccount
+¦¢  ¦¦¦¡ RefreshToken
+¦§¦¡ workspace_core
+¦¢  ¦§¦¡ WorkspaceProfile
+¦¢  ¦§¦¡ WorkspaceModulePreference
+¦¢  ¦¦¦¡ WorkspaceModuleState
+¦§¦¡ timetable_db
+¦¢  ¦§¦¡ User                (legacy)
+¦¢  ¦¦¦¡ Lesson
+¦§¦¡ calendar_db
+¦¢  ¦¦¦¡ CalendarEvent
+¦§¦¡ tasks_db
+¦¢  ¦¦¦¡ TaskItem
+¦¦¦¡ projects_db            (planned)
+   ¦§¦¡ Project
+   ¦§¦¡ ProjectMember
+   ¦¦¦¡ ProjectTask
+```
+
 ### `workspace_auth`
 - `User`
 - `OAuthAccount`
 - `RefreshToken`
-- ì¸ì¦ì˜ ìœ ì¼í•œ ì§„ì‹¤ ì›ë³¸
+- ÀÎÁõÀÇ À¯ÀÏÇÑ Áø½Ç ¿øº»
 
 ### `workspace_core`
 - `WorkspaceProfile`
 - `WorkspaceModulePreference`
 - `WorkspaceModuleState`
-- ê³µí†µ í”„ë¡œí•„ê³¼ ì›Œí¬ìŠ¤í˜ì´ìŠ¤ ì„¤ì • ì €ì¥ì†Œ
+- °øÅë ÇÁ·ÎÇÊ°ú ¿öÅ©½ºÆäÀÌ½º ¼³Á¤ ÀúÀå¼Ò
 
 ### `timetable_db`
 - `User`
 - `Lesson`
-- timetable ë ˆê±°ì‹œ ë¡œì»¬ ì‚¬ìš©ìì™€ ì‹œê°„í‘œ ë°ì´í„°
+- timetable ·¹°Å½Ã ·ÎÄÃ »ç¿ëÀÚ¿Í ½Ã°£Ç¥ µ¥ÀÌÅÍ
 
 ### `calendar_db`
 - `CalendarEvent`
-- ìº˜ë¦°ë” ì´ë²¤íŠ¸ ì „ìš© ì €ì¥ì†Œ
+- Ä¶¸°´õ ÀÌº¥Æ® Àü¿ë ÀúÀå¼Ò
 
 ### `tasks_db`
 - `TaskItem`
-- í•  ì¼ ì „ìš© ì €ì¥ì†Œ
+- ÇÒ ÀÏ Àü¿ë ÀúÀå¼Ò
 
 ### `projects_db`
-- í”„ë¡œì íŠ¸ ëª¨ë“ˆ ì˜ˆì • ì €ì¥ì†Œ
+- ÇÁ·ÎÁ§Æ® ¸ğµâ ¿¹Á¤ ÀúÀå¼Ò
 
-## 4. ì‚¬ìš©ì ì‹ë³„ ê·œì¹™
-- ì „ì—­ ì‚¬ìš©ì í‚¤ëŠ” `workspace_auth.User.id`
-- ê° ëª¨ë“ˆ DBëŠ” `authUserId`ë¥¼ ì†Œìœ  í‚¤ë¡œ ì‚¬ìš©í•œë‹¤.
-- ì´ë©”ì¼ ê¸°ë°˜ ë§¤í•‘ì€ ê³¼ë„ê¸° í˜¸í™˜ ë ˆì´ì–´ë‹¤.
-- ë³´í˜¸ APIëŠ” í´ë¼ì´ì–¸íŠ¸ê°€ ë³´ë‚¸ `userId`ë¥¼ ì‹ ë¢°í•˜ì§€ ì•ŠëŠ”ë‹¤.
+## 5. »ç¿ëÀÚ ½Äº° ±ÔÄ¢
+- Àü¿ª »ç¿ëÀÚ Å°´Â `workspace_auth.User.id`
+- °¢ ¸ğµâ DB´Â `authUserId`¸¦ ¼ÒÀ¯ Å°·Î »ç¿ëÇÑ´Ù.
+- ÀÌ¸ŞÀÏ ±â¹İ ¸ÅÇÎÀº °úµµ±â È£È¯ ·¹ÀÌ¾î´Ù.
+- º¸È£ API´Â Å¬¶óÀÌ¾ğÆ®°¡ º¸³½ `userId`¸¦ ½Å·ÚÇÏÁö ¾Ê´Â´Ù.
+- cross-db FK ´ë½Å ¾ÖÇÃ¸®ÄÉÀÌ¼Ç ·¹º§ ÂüÁ¶¸¦ »ç¿ëÇÑ´Ù.
 
-## 5. ì¸ì¦ íë¦„
-1. í´ë¼ì´ì–¸íŠ¸ê°€ `auth-server`ì—ì„œ ë¡œê·¸ì¸í•œë‹¤.
-2. `auth-server`ê°€ access tokenê³¼ refresh cookieë¥¼ ë°œê¸‰í•œë‹¤.
-3. ì•± ì„œë²„ëŠ” ë³´í˜¸ APIì—ì„œ `/auth/verify`ë¡œ access tokenì„ ê²€ì¦í•œë‹¤.
-4. ì•± ì„œë²„ëŠ” timetable ìª½ legacy local userë¥¼ í•´ì„í•œë‹¤.
-5. ê³µí†µ í”„ë¡œí•„ì´ í•„ìš”í•  ë•Œë§Œ `workspace_core`ë¥¼ ì‚¬ìš©í•œë‹¤.
+```mermaid
+flowchart TD
+    AuthUser[workspace_auth.User.id]
+    Profile[workspace_core.WorkspaceProfile.authUserId]
+    ModulePref[workspace_core.WorkspaceModulePreference.authUserId]
+    Lesson[timetable_db.Lesson.authUserId]
+    Calendar[calendar_db.CalendarEvent.authUserId]
+    Task[tasks_db.TaskItem.authUserId]
+    Project[projects_db.*.authUserId]
 
-## 6. ì›Œí¬ìŠ¤í˜ì´ìŠ¤ ì…¸
-- [AppShell.tsx](/C:/workflow-management/app/AppShell.tsx)ê°€ ì‚¬ì´ë“œë°” ì…¸ì„ ë‹´ë‹¹í•œë‹¤.
-- í™œì„± ëª¨ë“ˆ ëª©ë¡ì€ `/api/modules`ë¥¼ í†µí•´ `workspace_core`ì— ì €ì¥í•œë‹¤.
-- `workspace_core`ê°€ ì¼ì‹œì ìœ¼ë¡œ ë‚´ë ¤ê°€ë©´ ë¡œì»¬ ìºì‹œë¥¼ fallbackìœ¼ë¡œ ì‚¬ìš©í•œë‹¤.
-- ì¥ì•  ì¤‘ ë¡œì»¬ì—ì„œ ë°”ë€ ëª¨ë“ˆ êµ¬ì„±ì€ ë³µêµ¬ í›„ ì„œë²„ë¡œ ì¬ì „ì†¡í•œë‹¤.
+    AuthUser --> Profile
+    AuthUser --> ModulePref
+    AuthUser --> Lesson
+    AuthUser --> Calendar
+    AuthUser --> Task
+    AuthUser --> Project
+```
 
-## 7. Split ëŸ°íƒ€ì„ ì›ì¹™
-- `requireAppUser()`ëŠ” generic protected routeë¥¼ ìœ„í•´ `workspace_core`ì— ì˜ì¡´í•˜ì§€ ì•ŠëŠ”ë‹¤.
-- `ensureWorkspaceProfile()`ëŠ” core profileì´ í•„ìš”í•œ ê²½ë¡œì—ì„œë§Œ ì‚¬ìš©í•œë‹¤.
-- core ë³µêµ¬ ì‹œ aliasê°€ ì–´ê¸‹ë‚˜ë©´ legacy aliasì™€ core aliasë¥¼ ì¬ì¡°ì •í•œë‹¤.
-- ê¸°ë³¸ ëª¨ë“ˆ ì‹œë“œëŠ” idempotentí•´ì•¼ í•˜ë©° ì¤‘ë³µ ì´ˆê¸°í™”ë¡œ 500ì´ ë‚˜ë©´ ì•ˆ ëœë‹¤.
+## 6. ÀÎÁõ Èå¸§
+1. Å¬¶óÀÌ¾ğÆ®°¡ `auth-server`¿¡¼­ ·Î±×ÀÎÇÑ´Ù.
+2. `auth-server`°¡ access token°ú refresh cookie¸¦ ¹ß±ŞÇÑ´Ù.
+3. ¾Û ¼­¹ö´Â º¸È£ API¿¡¼­ `/auth/verify`·Î access tokenÀ» °ËÁõÇÑ´Ù.
+4. ¾Û ¼­¹ö´Â timetable ÂÊ legacy local user¸¦ ÇØ¼®ÇÑ´Ù.
+5. °øÅë ÇÁ·ÎÇÊÀÌ ÇÊ¿äÇÒ ¶§¸¸ `workspace_core`¸¦ »ç¿ëÇÑ´Ù.
 
-## 8. Prisma êµ¬ì¡°
-- ë£¨íŠ¸ [prisma/schema.prisma](/C:/workflow-management/prisma/schema.prisma)ëŠ” timetable ì „ìš© schemaë‹¤.
-- split schemaëŠ” ì•„ë˜ íŒŒì¼ì„ ì‚¬ìš©í•œë‹¤.
+## 7. ¿öÅ©½ºÆäÀÌ½º ¼Ğ
+- [AppShell.tsx](/C:/workflow-management/app/AppShell.tsx)°¡ »çÀÌµå¹Ù ¼ĞÀ» ´ã´çÇÑ´Ù.
+- È°¼º ¸ğµâ ¸ñ·ÏÀº `/api/modules`¸¦ ÅëÇØ `workspace_core`¿¡ ÀúÀåÇÑ´Ù.
+- `workspace_core`°¡ ÀÏ½ÃÀûÀ¸·Î ³»·Á°¡¸é ·ÎÄÃ Ä³½Ã¸¦ fallbackÀ¸·Î »ç¿ëÇÑ´Ù.
+- Àå¾Ö Áß ·ÎÄÃ¿¡¼­ ¹Ù²ï ¸ğµâ ±¸¼ºÀº º¹±¸ ÈÄ ¼­¹ö·Î ÀçÀü¼ÛÇÑ´Ù.
+- ±âº» ¸ğµâ ½Ãµå´Â idempotentÇØ¾ß ÇÏ¸ç Áßº¹ ÃÊ±âÈ­·Î 500ÀÌ ³ª¸é ¾È µÈ´Ù.
+
+## 8. Split ·±Å¸ÀÓ ¿øÄ¢
+- `requireAppUser()`´Â generic protected route¸¦ À§ÇØ `workspace_core`¿¡ ÀÇÁ¸ÇÏÁö ¾Ê´Â´Ù.
+- `ensureWorkspaceProfile()`´Â core profileÀÌ ÇÊ¿äÇÑ °æ·Î¿¡¼­¸¸ »ç¿ëÇÑ´Ù.
+- core º¹±¸ ½Ã alias°¡ ¾î±ß³ª¸é legacy alias¿Í core alias¸¦ ÀçÁ¶Á¤ÇÑ´Ù.
+- ¿î¿µ¿¡¼­´Â split DB URL ´©¶ô ½Ã fail-fast ÇÑ´Ù.
+- ¸ğµâ DB´Â ÀÎÁõ Á¤º¸¸¦ ÀúÀåÇÏÁö ¾Ê´Â´Ù.
+
+## 9. Prisma ±¸Á¶
+- ·çÆ® [prisma/schema.prisma](/C:/workflow-management/prisma/schema.prisma)´Â timetable Àü¿ë schema´Ù.
+- split schema´Â ¾Æ·¡ ÆÄÀÏÀ» »ç¿ëÇÑ´Ù.
   - [prisma/schemas/core.prisma](/C:/workflow-management/prisma/schemas/core.prisma)
   - [prisma/schemas/timetable.prisma](/C:/workflow-management/prisma/schemas/timetable.prisma)
   - [prisma/schemas/calendar.prisma](/C:/workflow-management/prisma/schemas/calendar.prisma)
   - [prisma/schemas/tasks.prisma](/C:/workflow-management/prisma/schemas/tasks.prisma)
-- ë°°í¬ ì‹œ migratorëŠ” `timetable -> core -> calendar -> tasks` ìˆœìœ¼ë¡œ schemaë¥¼ ë°˜ì˜í•œë‹¤.
+- ¹èÆ÷ ½Ã migrator´Â `timetable -> core -> calendar -> tasks` ¼øÀ¸·Î schema¸¦ ¹İ¿µÇÑ´Ù.
 
-## 9. í˜„ì¬ ìƒíƒœ
-- `workspace_core` ëŸ°íƒ€ì„ ì—°ê²° ì™„ë£Œ
-- `calendar_db` ëŸ°íƒ€ì„ ë¶„ë¦¬ ì™„ë£Œ
-- `tasks_db` ëŸ°íƒ€ì„ ë¶„ë¦¬ ì™„ë£Œ
-- `projects_db`ëŠ” ì•„ì§ planned ìƒíƒœ
-- `timetable_db`ì—ëŠ” legacy `User`ê°€ ë‚¨ì•„ ìˆìœ¼ë©° ì¥ê¸°ì ìœ¼ë¡œ ë” ì¶•ì†Œí•  ì˜ˆì •ì´ë‹¤.
+## 10. ÇöÀç »óÅÂ
+- `workspace_core` ·±Å¸ÀÓ ¿¬°á ¿Ï·á
+- `calendar_db` ·±Å¸ÀÓ ºĞ¸® ¿Ï·á
+- `tasks_db` ·±Å¸ÀÓ ºĞ¸® ¿Ï·á
+- `projects_db`´Â ¾ÆÁ÷ planned »óÅÂ
+- `timetable_db`¿¡´Â legacy `User`°¡ ³²¾Æ ÀÖÀ¸¸ç Àå±âÀûÀ¸·Î ´õ Ãà¼ÒÇÒ ¿¹Á¤ÀÌ´Ù.
 
-## 10. ë‹¤ìŒ ë‹¨ê³„
-- `projects_db`ì™€ í”„ë¡œì íŠ¸ ëª¨ë“ˆ êµ¬í˜„
-- timetable legacy `User.password` ì œê±° ìˆ˜ìˆœ ì •ë¦¬
-- `timetable_db`ì— ë‚¨ì•„ ìˆëŠ” legacy í…Œì´ë¸” ì •ë¦¬
-- split DB ê²€ì¦ ìë™í™” ë³´ê°•
+## 11. `timetable_db`¿¡¼­ ºüÁ®¾ß ÇÏ´Â °Í
+- profile-like ÇÊµå
+- legacy `CalendarEvent`
+- legacy `TaskItem`
+- Àå±âÀûÀ¸·Î´Â local `User` ÀÚÃ¼
+
+## 12. ³²Àº ´Ü°è
+1. `projects_db`¿Í ÇÁ·ÎÁ§Æ® ¸ğµâ ±¸Çö
+2. timetable ownershipÀ» `authUserId` Áß½ÉÀ¸·Î ´õ ´Ü¼øÈ­
+3. timetable legacy `User.password` Á¦°Å ¼ö¼ø Á¤¸®
+4. `timetable_db`¿¡ ³²¾Æ ÀÖ´Â legacy Å×ÀÌºí Á¤¸®
+5. split DB °ËÁõ ÀÚµ¿È­ º¸°­
+
+## 13. ¿Ï·á ±âÁØ
+- `workspace_auth`´Â ÀÎÁõ µ¥ÀÌÅÍ¸¸ °¡Áø´Ù.
+- `workspace_core`´Â °øÅë ÇÁ·ÎÇÊ/¸ğµâ »óÅÂ¸¸ °¡Áø´Ù.
+- `timetable_db`´Â ½Ã°£Ç¥ µ¥ÀÌÅÍ¸¸ °¡Áø´Ù.
+- `calendar_db`´Â Ä¶¸°´õ µ¥ÀÌÅÍ¸¸ °¡Áø´Ù.
+- `tasks_db`´Â ÇÒ ÀÏ µ¥ÀÌÅÍ¸¸ °¡Áø´Ù.
+- »õ ¸ğµâÀº ±âº»ÀûÀ¸·Î º°µµ DB °æ°è¿¡¼­ ½ÃÀÛÇÑ´Ù.

@@ -1,34 +1,37 @@
-ï»¿# ë¬¸ì„œ ì¸ë±ìŠ¤
+# ¹®¼­ ÀÎµ¦½º
 
-## í˜„ì¬ ê¸°ì¤€ êµ¬ì¡°
-- ì¸ì¦ ì›ë³¸: `workspace_auth`
-- ê³µí†µ í”„ë¡œí•„/ëª¨ë“ˆ ì„¤ì •: `workspace_core`
-- ì‹œê°„í‘œ: `timetable_db`
-- ìº˜ë¦°ë”: `calendar_db`
-- í•  ì¼: `tasks_db`
-- í”„ë¡œì íŠ¸: `projects_db` ì˜ˆì •
+## ÇöÀç ±âÁØ ±¸Á¶
+- ÀÎÁõ ¿øº»: `workspace_auth`
+- °øÅë ÇÁ·ÎÇÊ/¸ğµâ ¼³Á¤: `workspace_core`
+- ½Ã°£Ç¥: `timetable_db`
+- Ä¶¸°´õ: `calendar_db`
+- ÇÒ ÀÏ: `tasks_db`
+- ÇÁ·ÎÁ§Æ®: `projects_db` ¿¹Á¤
 
-## ì£¼ìš” ë¬¸ì„œ
-- [ARCHITECTURE.md](/C:/workflow-management/DOCS/ARCHITECTURE.md)
-  - í˜„ì¬ êµ¬ì¡°ì™€ ëª©í‘œ êµ¬ì¡°
-- [API_SPEC.md](/C:/workflow-management/DOCS/API_SPEC.md)
-  - auth/app API ê³„ì•½
-- [FILE_SPEC.md](/C:/workflow-management/DOCS/FILE_SPEC.md)
-  - íŒŒì¼ë³„ ì±…ì„ ì •ë¦¬
-- [MODULE_DB_REFACTOR.md](/C:/workflow-management/DOCS/MODULE_DB_REFACTOR.md)
-  - ëª¨ë“ˆë³„ DB ë¶„ë¦¬ ê³„íšê³¼ í˜„ì¬ ìƒíƒœ
+## ÁÖ¿ä ¹®¼­
 - [HANDOUT.md](/C:/workflow-management/DOCS/HANDOUT.md)
-  - ë°œí‘œ/ê³µìœ ìš© ìš”ì•½
-- [TODO.md](/C:/workflow-management/DOCS/TODO.md)
-  - ë‚¨ì€ ì‘ì—… ëª©ë¡
+  - »õ ÀÛ¾÷È¯°æ¿¡¼­ ºü¸£°Ô ¸Æ¶ôÀ» Àâ±â À§ÇÑ ¿ä¾àº»
+- [ARCHITECTURE.md](/C:/workflow-management/DOCS/ARCHITECTURE.md)
+  - ÇöÀç ±¸Á¶, DB °æ°è, split ¿øÄ¢, ³²Àº ´Ü°è
+- [API_SPEC.md](/C:/workflow-management/DOCS/API_SPEC.md)
+  - auth/app API °è¾à
+- [FILE_SPEC.md](/C:/workflow-management/DOCS/FILE_SPEC.md)
+  - ÆÄÀÏº° Ã¥ÀÓ Á¤¸®
 - [DEPLOYMENT.md](/C:/workflow-management/DOCS/DEPLOYMENT.md)
-  - OCI/Docker/GitHub Actions ë°°í¬ ë©”ëª¨
-- [SPLIT_SCOPE.md](/C:/workflow-management/DOCS/SPLIT_SCOPE.md)
-  - DB ë¶„ë¦¬ ë²”ìœ„ ì´ˆì•ˆ
+  - OCI/Docker/GitHub Actions ¹èÆ÷ ¸Ş¸ğ
+- [TODO.md](/C:/workflow-management/DOCS/TODO.md)
+  - ³²Àº ÀÛ¾÷ ¸ñ·Ï
+- [Requirements.md](/C:/workflow-management/DOCS/Requirements.md)
+  - ÃÊ±â ¿ä±¸»çÇ×°ú ÀÎÁõ ÀüÈ¯ ¹è°æ
+- [auth-server/README.md](/C:/workflow-management/DOCS/auth-server/README.md)
+  - auth-server ±¸Á¶ ¸Ş¸ğ
+- [auth-server/VERIFICATION.md](/C:/workflow-management/DOCS/auth-server/VERIFICATION.md)
+  - auth-server °ËÁõ ±â·Ï
 
-## ì§€ê¸ˆ ì½ìœ¼ë©´ ì¢‹ì€ ìˆœì„œ
+## Áö±İ ÀĞÀ¸¸é ÁÁÀº ¼ø¼­
 1. [HANDOUT.md](/C:/workflow-management/DOCS/HANDOUT.md)
 2. [ARCHITECTURE.md](/C:/workflow-management/DOCS/ARCHITECTURE.md)
 3. [FILE_SPEC.md](/C:/workflow-management/DOCS/FILE_SPEC.md)
-4. [MODULE_DB_REFACTOR.md](/C:/workflow-management/DOCS/MODULE_DB_REFACTOR.md)
-5. [TODO.md](/C:/workflow-management/DOCS/TODO.md)
+4. [API_SPEC.md](/C:/workflow-management/DOCS/API_SPEC.md)
+5. [DEPLOYMENT.md](/C:/workflow-management/DOCS/DEPLOYMENT.md)
+6. [TODO.md](/C:/workflow-management/DOCS/TODO.md)
